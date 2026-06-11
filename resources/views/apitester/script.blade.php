@@ -1,4 +1,4 @@
-<script>
+    <script>
 // ========= STATE =========
 let tabs = [], activeTab = null, tabCounter = 0, activeRespFormat = 'pretty', currentAbort = null;
 
@@ -178,6 +178,22 @@ function updateFieldVarBadges(){
             $('#body-json').append($('<div>',{id:'body-var-badge',class:'flex flex-wrap gap-1 mt-1'}).html(names));
         }else{$bodyBadge.html(names);}
     }else if($bodyBadge.length){$bodyBadge.remove();}
+    // Auth fields
+    $('#auth-bearer-token, #auth-username, #auth-password, #auth-key-name, #auth-key-value').each(function(){
+        const v=findVars($(this).val()||'');
+        const $badge=$(this).siblings('.field-var-badge');
+        if(v.length&&env){
+            if(!$badge.length){
+                $badge=$('<span>',{class:'field-var-badge'});
+                $(this).after($badge);
+            }
+            const names=v.map(x=>{
+                const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);
+                return vd?`<span class="var-badge var-badge-found" title="${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Not found">${esc(x.raw)}</span>`;
+            }).join(' ');
+            $badge.html(names);
+        }else if($badge.length){$badge.remove();}
+    });
 }
 
 // ========= ENVIRONMENTS =========
@@ -591,9 +607,9 @@ async function sendReq(){
         const qs=allParams.map(p=>encodeURIComponent(p.key)+'='+encodeURIComponent(p.value)).join('&');
         url+=(url.includes('?')?'&':'?')+qs;
     }
-    if(d.auth?.type==='bearer'&&d.auth.bearer)allHeaders.push({key:'Authorization',value:'Bearer '+d.auth.bearer});
-    if(d.auth?.type==='basic'&&d.auth.username)allHeaders.push({key:'Authorization',value:'Basic '+btoa(d.auth.username+':'+(d.auth.password||''))});
-    if(d.auth?.type==='apikey'&&d.auth.keyName)allHeaders.push({key:d.auth.keyName,value:d.auth.keyValue});
+    if(d.auth?.type==='bearer'&&d.auth.bearer)allHeaders.push({key:'Authorization',value:'Bearer '+subVars(d.auth.bearer)});
+    if(d.auth?.type==='basic'&&d.auth.username)allHeaders.push({key:'Authorization',value:'Basic '+btoa(subVars(d.auth.username)+':'+subVars(d.auth.password||''))});
+    if(d.auth?.type==='apikey'&&d.auth.keyName)allHeaders.push({key:subVars(d.auth.keyName),value:subVars(d.auth.keyValue)});
 
     // Substitute vars in headers
     $.each(allHeaders,(i,h)=>{h.key=subVars(h.key);h.value=subVars(h.value);});

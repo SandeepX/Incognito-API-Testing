@@ -20,8 +20,6 @@ class ItemResource extends JsonResource
             'request_data' => $this->request_data,
             'order' => $this->order,
             'children' => ItemResource::collection($this->whenLoaded('children')),
-            'created_at' => $this->created_at,
-            'updated_at' => $this->updated_at,
         ];
     }
 }

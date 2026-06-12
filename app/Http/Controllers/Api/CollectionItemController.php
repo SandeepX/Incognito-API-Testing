@@ -27,20 +27,20 @@ class CollectionItemController extends Controller
     {
         $data = $request->validated();
 
-        $maxOrder = CollectionItem::where('collection_id', $collectionId)
+        $maxOrder =  CollectionItem::where('collection_id', $collectionId)
             ->where('parent_id', $data['parent_id'] ?? null)
             ->max('order') ?? 0;
 
         $item = CollectionItem::create([
-            'id' => (string) Str::uuid(),
+            'id'            => (string) Str::uuid(),
             'collection_id' => $collectionId,
-            'parent_id' => $data['parent_id'] ?? null,
-            'type' => $data['type'],
-            'name' => $data['name'],
-            'method' => $data['method'] ?? null,
-            'url' => $data['url'] ?? null,
-            'request_data' => $data['request_data'] ?? null,
-            'order' => $maxOrder + 1,
+            'parent_id'     => $data['parent_id'] ?? null,
+            'type'          => $data['type'],
+            'name'          => $data['name'],
+            'method'        => $data['request_data']['method'] ?? null,
+            'url'           => $data['request_data']['url'] ?? null,
+            'request_data'  => $data['request_data'] ?? null,
+            'order'         => (int) $maxOrder + 1,
         ]);
 
         return new ItemResource($item);

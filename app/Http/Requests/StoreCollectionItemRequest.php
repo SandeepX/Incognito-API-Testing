@@ -14,13 +14,13 @@ class StoreCollectionItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'collection_id' => ['required', 'uuid', 'exists:collections,id'],
-            'parent_id' => ['nullable', 'uuid', 'exists:collection_items,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'type' => ['required', 'in:folder,request'],
-            'method' => ['required_if:type,request', 'in:GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS'],
-            'url' => ['required_if:type,request', 'string'],
-            'request_data' => ['nullable', 'array'],
+            'type'                  => 'required|in:folder,request',
+            'name'                  => 'required|string|max:255',
+            'parent_id'             => 'nullable|string',
+            'request_data'          => 'nullable|array',
+            'request_data.method'   => 'nullable|string',
+            'request_data.url'      => 'nullable|string',
+            'response_data'         => 'nullable|array',
         ];
     }
 

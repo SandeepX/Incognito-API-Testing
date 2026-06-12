@@ -30,40 +30,20 @@
         <!-- Right Actions -->
         <div class="flex items-center gap-2 ml-auto">
             <!-- Environment Selector -->
-            <div class="flex items-center gap-2">
-                <span class="text-xs text-surface-400">Environment:</span>
+            <div class="flex items-center gap-1.5">
                 <select id="env-select" class="bg-surface-700 dark:bg-surface-800 border border-surface-600 dark:border-surface-700 text-surface-100 text-xs px-2 py-1.5 rounded focus:outline-none focus:ring-2 focus:ring-blue-500/50 cursor-pointer max-w-[120px] hover:bg-surface-600 dark:hover:bg-surface-700 transition" title="Environment"></select>
+                <button onclick="manageEnvironments()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Manage Environments">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </button>
             </div>
-
-            <!-- Send Button -->
-            <button onclick="sendReq()" class="bg-blue-600 hover:bg-blue-500 active:scale-[0.97] text-white px-5 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/30">
-                <span id="send-icon">
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
-                </span>
-                <span id="send-text">Send</span>
-            </button>
-
-            <button id="cancel-btn" onclick="cancelReq()" class="hidden bg-red-600 hover:bg-red-500 text-white px-4 py-1.5 rounded text-xs font-semibold transition-all flex items-center gap-2 shadow-lg" title="Cancel">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
-                Cancel
-            </button>
 
             <!-- More Options -->
             <div class="flex items-center gap-1.5 border-l border-surface-700 pl-2 ml-2">
-                <button onclick="importCurl()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Import">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
-                </button>
-                <button onclick="exportCurl()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Export">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5-5 5 5M12 4v11"/></svg>
-                </button>
                 <button onclick="saveResp()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Save Response">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
                 </button>
-                <button onclick="manageEnvironments()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Manage Environments">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/></svg>
-                </button>
                 <button id="theme-toggle" onclick="toggleTheme()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Toggle theme">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <span id="theme-icon"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg></span>
                 </button>
             </div>
         </div>
@@ -117,7 +97,7 @@
             </div>
 
             <!-- Request Panel -->
-            <section class="bg-surface-800 dark:bg-surface-850 border-b border-surface-700 dark:border-surface-800 p-4 overflow-y-auto space-y-4 flex-shrink-0" id="request-panel">
+            <section class="bg-surface-800 dark:bg-surface-850 p-4 overflow-y-auto space-y-4 flex-shrink-0" id="request-panel">
                 <!-- URL Bar with Method Dropdown -->
                 <div class="flex gap-3 items-center">
                     <select id="method" class="method-select border border-surface-600 dark:border-surface-700 rounded px-3 py-2 text-xs font-bold w-auto min-w-[90px] focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 cursor-pointer hover:bg-surface-600 transition">
@@ -134,16 +114,33 @@
                                class="w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 hover:bg-surface-650 dark:hover:bg-surface-700 transition-colors font-mono tracking-tight text-surface-100 dark:text-surface-100 whitespace-nowrap overflow-x-auto overflow-y-hidden" style="outline:none;word-break:keep-all">
                         </div>
                     </div>
+                    <button onclick="sendReq()" class="bg-blue-600 hover:bg-blue-500 active:scale-[0.97] text-white px-5 py-2 rounded text-xs font-semibold transition-all flex items-center gap-2 shadow-lg shadow-blue-900/30 shrink-0">
+                        <span id="send-icon">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </span>
+                        <span id="send-text">Send</span>
+                    </button>
+                    <button id="cancel-btn" onclick="cancelReq()" class="hidden bg-red-600 hover:bg-red-500 text-white px-3 py-2 rounded text-xs font-semibold transition-all flex items-center gap-1 shrink-0 shadow-lg" title="Cancel">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
                 </div>
 
                 <!-- Request Tabs -->
-                <div class="flex gap-1 text-xs border-b border-surface-700 dark:border-surface-700 pb-1">
+                <div class="flex gap-1 text-xs border-b border-surface-700 dark:border-surface-700 pb-1 items-center">
                     <button class="tab-btn py-2 px-3 font-medium text-blue-400 border-b-2 border-blue-400" data-tab="params">Params</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="authorization">Authorization</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="headers">Headers</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="body">Body</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="scripts">Scripts</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="settings">Settings</button>
+                    <div class="ml-auto flex gap-1">
+                        <button onclick="importCurl()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Import cURL">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
+                        </button>
+                        <button onclick="exportCurl()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Export cURL">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5-5 5 5M12 4v11"/></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <div id="tab-params" class="tab-content space-y-2">
@@ -187,8 +184,11 @@
                 </div>
             </section>
 
+            <!-- Resize Handle -->
+            <div id="resp-resize-handle" class="resize-handle shrink-0"></div>
+
             <!-- Response Panel -->
-            <section class="flex-1 bg-surface-800 dark:bg-surface-850 overflow-hidden flex flex-col border-t border-surface-700 dark:border-surface-800">
+            <section class="flex-1 bg-surface-800 dark:bg-surface-850 overflow-hidden flex flex-col" id="response-panel">
                 <!-- Response Tabs -->
                 <div class="flex items-center justify-between px-4 py-2 border-b border-surface-700 dark:border-surface-800 bg-surface-750 dark:bg-surface-800 shrink-0">
                     <div class="flex gap-1 text-xs font-medium">

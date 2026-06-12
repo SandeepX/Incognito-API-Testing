@@ -214,4 +214,28 @@
     
     .resp-content { display: none; }
     .resp-content.active { display: block; }
+
+    /* Resize Handle */
+    .resize-handle {
+        height: 10px;
+        cursor: ns-resize;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        z-index: 5;
+        user-select: none;
+    }
+    .resize-handle::before {
+        content: '';
+        position: absolute;
+        inset: 3px 0;
+        border-top: 1px solid #cbd5e1;
+        pointer-events: none;
+        transition: border-color 0.15s;
+    }
+    .dark .resize-handle::before { border-top-color: #475569; }
+    .resize-handle:hover::before { border-top-color: #3b82f6; }
+    .resize-handle.dragging::before { border-top-color: #3b82f6; border-top-width: 2px; }
+
 </style>

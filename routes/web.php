@@ -11,24 +11,15 @@ Route::get('/', [ApiTesterController::class, 'index']);
 Route::post('/api-tester/proxy', [ApiTesterController::class, 'proxy']);
 
 Route::prefix('api')->group(function () {
-    Route::get('/environments', [EnvironmentController::class, 'index']);
-    Route::post('/environments', [EnvironmentController::class, 'store']);
-    Route::put('/environments/{id}', [EnvironmentController::class, 'update']);
-    Route::delete('/environments/{id}', [EnvironmentController::class, 'destroy']);
+    // Resource routes with implicit model binding
+    Route::apiResource('environments', EnvironmentController::class);
+    Route::apiResource('workspaces', WorkspaceController::class);
+    Route::apiResource('collections', CollectionController::class);
 
-    Route::get('/workspaces', [WorkspaceController::class, 'index']);
-    Route::post('/workspaces', [WorkspaceController::class, 'store']);
-    Route::put('/workspaces/{id}', [WorkspaceController::class, 'update']);
-    Route::delete('/workspaces/{id}', [WorkspaceController::class, 'destroy']);
-
-    Route::get('/collections', [CollectionController::class, 'index']);
-    Route::post('/collections', [CollectionController::class, 'store']);
-    Route::put('/collections/{id}', [CollectionController::class, 'update']);
-    Route::delete('/collections/{id}', [CollectionController::class, 'destroy']);
-
+    // Nested collection items routes
     Route::get('/collections/{collectionId}/items', [CollectionItemController::class, 'index']);
     Route::post('/collections/{collectionId}/items', [CollectionItemController::class, 'store']);
-    Route::put('/collections/items/{id}', [CollectionItemController::class, 'update']);
-    Route::delete('/collections/items/{id}', [CollectionItemController::class, 'destroy']);
+    Route::put('/collections/items/{collectionItem}', [CollectionItemController::class, 'update']);
+    Route::delete('/collections/items/{collectionItem}', [CollectionItemController::class, 'destroy']);
     Route::post('/collections/{collectionId}/reorder', [CollectionItemController::class, 'reorder']);
 });

@@ -3,66 +3,60 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCollectionItemRequest;
+use App\Http\Requests\UpdateCollectionItemRequest;
+use App\Http\Resources\ItemResource;
 use App\Models\Collection;
 use App\Models\CollectionItem;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 
 class CollectionItemController extends Controller
 {
-    public function index($collectionId)
+    public function index($collectionId): ResourceCollection
     {
         $collection = Collection::with(['items.children' => function ($q) {
-            $q->with('children')->orderBy('sort_order');
+            $q->with('children')->orderBy('order');
         }])->findOrFail($collectionId);
 
-        return $collection->items;
+        return ItemResource::collection($collection->items);
     }
 
-    public function store(Request $request, $collectionId)
+    public function store(StoreCollectionItemRequest $request, $collectionId)
     {
-        $validated = $request->validate([
-            'type' => 'required|in:folder,request',
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|uuid|exists:collection_items,id',
-            'request_data' => 'nullable|array',
-            'response_data' => 'nullable|array',
-        ]);
+        $data = $request->validated();
 
         $maxOrder = CollectionItem::where('collection_id', $collectionId)
-            ->where('parent_id', $validated['parent_id'] ?? null)
-            ->max('sort_order') ?? 0;
+            ->where('parent_id', $data['parent_id'] ?? null)
+            ->max('order') ?? 0;
 
         $item = CollectionItem::create([
             'id' => (string) Str::uuid(),
             'collection_id' => $collectionId,
-            'parent_id' => $validated['parent_id'] ?? null,
-            'type' => $validated['type'],
-            'name' => $validated['name'],
-            'request_data' => $validated['request_data'] ?? null,
-            'response_data' => $validated['response_data'] ?? null,
-            'sort_order' => $maxOrder + 1,
+            'parent_id' => $data['parent_id'] ?? null,
+            'type' => $data['type'],
+            'name' => $data['name'],
+            'method' => $data['method'] ?? null,
+            'url' => $data['url'] ?? null,
+            'request_data' => $data['request_data'] ?? null,
+            'order' => $maxOrder + 1,
         ]);
 
-        return response()->json($item, 201);
+        return new ItemResource($item);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCollectionItemRequest $request, CollectionItem $collectionItem)
     {
-        $item = CollectionItem::findOrFail($id);
-        $item->update($request->validate([
-            'name' => 'sometimes|string|max:255',
-            'request_data' => 'sometimes|array',
-            'response_data' => 'sometimes|array',
-            'parent_id' => 'nullable|uuid|exists:collection_items,id',
-            'sort_order' => 'sometimes|integer',
-        ]));
-        return response()->json($item);
+        $collectionItem->update($request->validated());
+
+        return new ItemResource($collectionItem);
     }
 
-    public function destroy($id)
+    public function destroy(CollectionItem $collectionItem)
     {
-        CollectionItem::findOrFail($id)->delete();
+        $collectionItem->delete();
+
         return response()->json(['success' => true]);
     }
 
@@ -72,7 +66,7 @@ class CollectionItemController extends Controller
             'items' => 'required|array',
             'items.*.id' => 'required|uuid',
             'items.*.parent_id' => 'nullable|uuid',
-            'items.*.sort_order' => 'required|integer',
+            'items.*.order' => 'required|integer',
         ]);
 
         foreach ($validated['items'] as $itemData) {
@@ -80,7 +74,7 @@ class CollectionItemController extends Controller
                 ->where('collection_id', $collectionId)
                 ->update([
                     'parent_id' => $itemData['parent_id'],
-                    'sort_order' => $itemData['sort_order'],
+                    'order' => $itemData['order'],
                 ]);
         }
 

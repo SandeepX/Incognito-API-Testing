@@ -3,48 +3,44 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreEnvironmentRequest;
+use App\Http\Requests\UpdateEnvironmentRequest;
+use App\Http\Resources\EnvironmentResource;
 use App\Models\Environment;
-use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 
 class EnvironmentController extends Controller
 {
-    public function index()
+    public function index(): ResourceCollection
     {
-        return Environment::query()
-            ->orderBy('name')
-            ->get();
+        return EnvironmentResource::collection(
+            Environment::query()->orderBy('name')->get()
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreEnvironmentRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'variables' => 'nullable|array',
-        ]);
-
         $env = Environment::create([
             'id' => (string) Str::uuid(),
-            'name' => $validated['name'],
-            'variables' => $validated['variables'] ?? [],
+            'name' => $request->validated('name'),
+            'variables' => $request->validated('variables') ?? [],
         ]);
-        return response()->json($env, 201);
+
+        return new EnvironmentResource($env);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateEnvironmentRequest $request, Environment $environment)
     {
-        $env = Environment::findOrFail($id);
-        $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'variables' => 'sometimes|array',
-        ]);
-        $env->update($validated);
-        return response()->json($env);
+        $environment->update($request->validated());
+
+        return new EnvironmentResource($environment);
     }
 
-    public function destroy($id)
+    public function destroy(Environment $environment)
     {
-        Environment::findOrFail($id)->delete();
+        $environment->delete();
+
         return response()->json(['success' => true]);
     }
 }

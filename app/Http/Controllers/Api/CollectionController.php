@@ -3,52 +3,51 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreCollectionRequest;
+use App\Http\Requests\UpdateCollectionRequest;
+use App\Http\Resources\CollectionResource;
 use App\Models\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 
 class CollectionController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request): ResourceCollection
     {
         $query = Collection::with(['items.children' => function ($q) {
-            $q->with('children')->orderBy('sort_order');
+            $q->with('children')->orderBy('order');
         }])->orderBy('name');
 
         if ($request->has('workspace_id')) {
             $query->where('workspace_id', $request->workspace_id);
         }
 
-        return $query->get();
+        return CollectionResource::collection($query->get());
     }
 
-    public function store(Request $request)
+    public function store(StoreCollectionRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'workspace_id' => 'nullable|uuid|exists:workspaces,id',
-        ]);
-        $coll = Collection::create([
+        $collection = Collection::create([
             'id' => (string) Str::uuid(),
-            'workspace_id' => $validated['workspace_id'] ?? null,
-            'name' => $validated['name'],
+            'workspace_id' => $request->validated('workspace_id'),
+            'name' => $request->validated('name'),
         ]);
-        return response()->json($coll, 201);
+
+        return new CollectionResource($collection);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateCollectionRequest $request, Collection $collection)
     {
-        $coll = Collection::findOrFail($id);
-        $coll->update($request->validate([
-            'name' => 'sometimes|string|max:255',
-            'workspace_id' => 'nullable|uuid|exists:workspaces,id',
-        ]));
-        return response()->json($coll);
+        $collection->update($request->validated());
+
+        return new CollectionResource($collection);
     }
 
-    public function destroy($id)
+    public function destroy(Collection $collection)
     {
-        Collection::findOrFail($id)->delete();
+        $collection->delete();
+
         return response()->json(['success' => true]);
     }
 }

@@ -10,10 +10,11 @@ return new class extends Migration
     {
         Schema::create('collections', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->uuid('workspace_id')->nullable();
-            $table->foreign('workspace_id')->references('id')->on('workspaces')->onDelete('set null');
+            $table->foreignUuid('workspace_id')->nullable()->constrained()->nullOnDelete();
             $table->string('name');
             $table->timestamps();
+
+            $table->index(['workspace_id']);
         });
     }
 

@@ -3,37 +3,44 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreWorkspaceRequest;
+use App\Http\Requests\UpdateWorkspaceRequest;
+use App\Http\Resources\WorkspaceResource;
 use App\Models\Workspace;
-use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\ResourceCollection;
 use Illuminate\Support\Str;
 
 class WorkspaceController extends Controller
 {
-    public function index()
+    public function index(): ResourceCollection
     {
-        return Workspace::with('collections')->orderBy('name')->get();
+        return WorkspaceResource::collection(
+            Workspace::with('collections')->orderBy('name')->get()
+        );
     }
 
-    public function store(Request $request)
+    public function store(StoreWorkspaceRequest $request)
     {
-        $validated = $request->validate(['name' => 'required|string|max:255']);
-        $ws = Workspace::create([
+        $workspace = Workspace::create([
             'id' => (string) Str::uuid(),
-            'name' => $validated['name'],
+            'name' => $request->validated('name'),
+            'description' => $request->validated('description'),
         ]);
-        return response()->json($ws, 201);
+
+        return new WorkspaceResource($workspace);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateWorkspaceRequest $request, Workspace $workspace)
     {
-        $ws = Workspace::findOrFail($id);
-        $ws->update($request->validate(['name' => 'string|max:255']));
-        return response()->json($ws);
+        $workspace->update($request->validated());
+
+        return new WorkspaceResource($workspace);
     }
 
-    public function destroy($id)
+    public function destroy(Workspace $workspace)
     {
-        Workspace::findOrFail($id)->delete();
+        $workspace->delete();
+
         return response()->json(['success' => true]);
     }
 }

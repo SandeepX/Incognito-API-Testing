@@ -3,35 +3,43 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CollectionItem extends Model
 {
     protected $keyType = 'string';
     public $incrementing = false;
-    protected $fillable = ['id', 'collection_id', 'parent_id', 'type', 'name', 'request_data', 'response_data', 'sort_order'];
-    protected $casts = ['request_data' => 'array', 'response_data' => 'array'];
 
-    public function collection()
+    protected $fillable = ['id', 'collection_id', 'parent_id', 'type', 'name', 'method', 'url', 'request_data', 'order'];
+
+    protected $casts = [
+        'request_data' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function collection(): BelongsTo
     {
         return $this->belongsTo(Collection::class);
     }
 
-    public function parent()
+    public function parent(): BelongsTo
     {
         return $this->belongsTo(CollectionItem::class, 'parent_id');
     }
 
-    public function children()
+    public function children(): HasMany
     {
-        return $this->hasMany(CollectionItem::class, 'parent_id')->orderBy('sort_order');
+        return $this->hasMany(CollectionItem::class, 'parent_id')->orderBy('order');
     }
 
-    public function isFolder()
+    public function isFolder(): bool
     {
         return $this->type === 'folder';
     }
 
-    public function isRequest()
+    public function isRequest(): bool
     {
         return $this->type === 'request';
     }

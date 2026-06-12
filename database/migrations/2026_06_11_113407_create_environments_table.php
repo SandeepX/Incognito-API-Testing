@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('name');
             $table->json('variables')->nullable();
             $table->timestamps();
+
+            $table->index(['name']);
         });
     }
 

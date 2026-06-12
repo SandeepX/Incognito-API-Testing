@@ -81,4 +81,6 @@
     .var-badge-missing { background: #fee2e2; color: #dc2626; }
     .dark .var-badge-missing { background: #450a0a; color: #fca5a5; }
     .field-var-badge { display: inline-flex; gap: 3px; margin-left: 4px; flex-shrink: 0; }
+    #url:empty:before { content: attr(data-placeholder); color: #94a3b8; pointer-events: none; }
+    .dark #url:empty:before { color: #64748b; }
 </style>

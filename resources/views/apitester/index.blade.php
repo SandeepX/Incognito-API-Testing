@@ -72,7 +72,7 @@
             <!-- Request Tabs Bar -->
             <div class="bg-white dark:bg-surface-800 border-b border-surface-200 dark:border-surface-700 flex items-center px-2 shrink-0 overflow-x-auto" id="tabs-container">
                 <div class="flex" id="tabs-list"></div>
-                <button onclick="newTab()" class="px-2.5 py-1.5 text-surface-400 dark:text-surface-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-md ml-1 transition font-medium text-sm leading-none" title="New Tab">+</button>
+                <button onclick="promptNewTab()" class="px-2.5 py-1.5 text-surface-400 dark:text-surface-500 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-md ml-1 transition font-medium text-sm leading-none" title="New Tab">+</button>
             </div>
 
             <!-- Request Panel -->
@@ -89,9 +89,9 @@
                         <option class="text-purple-600 dark:text-purple-400">OPTIONS</option>
                     </select>
                     <div class="flex-1 relative">
-                        <input id="url" type="text" placeholder="https://api.example.com/endpoint (use @{{variable}} for env vars)"
-                               class="w-full border border-surface-200 dark:border-surface-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-surface-50 dark:bg-surface-700 hover:bg-white dark:hover:bg-surface-600 transition-colors font-mono tracking-tight text-surface-800 dark:text-surface-100">
-                        <div id="url-vars-preview" class="mt-1 text-[11px] font-mono leading-relaxed hidden"></div>
+                        <div id="url" contenteditable="true" data-placeholder="https://api.example.com/endpoint"
+                               class="w-full border border-surface-200 dark:border-surface-600 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 bg-surface-50 dark:bg-surface-700 hover:bg-white dark:hover:bg-surface-600 transition-colors font-mono tracking-tight text-surface-800 dark:text-surface-100 whitespace-nowrap overflow-x-auto overflow-y-hidden" style="outline:none;word-break:keep-all">
+                        </div>
                     </div>
                     <button onclick="sendReq()" class="bg-brand-600 dark:bg-brand-500 text-white px-5 py-2 rounded-lg text-xs font-semibold hover:bg-brand-500 dark:hover:bg-brand-400 active:scale-[0.97] transition-all flex items-center gap-2 shadow-sm shadow-brand-200 dark:shadow-brand-800 hover:shadow-brand-300/30">
                         <span id="send-icon">

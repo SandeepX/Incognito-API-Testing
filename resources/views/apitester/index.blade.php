@@ -131,8 +131,7 @@
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="authorization">Authorization</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="headers">Headers</button>
                     <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="body">Body</button>
-                    <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="scripts">Scripts</button>
-                    <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="settings">Settings</button>
+                    <button class="tab-btn py-2 px-3 font-medium text-surface-400 hover:text-surface-300 border-b-2 border-transparent" data-tab="cookies">Cookies</button>
                     <div class="ml-auto flex gap-1">
                         <button onclick="importCurl()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Import cURL">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg>
@@ -162,11 +161,19 @@
                     <div id="headers-list"></div>
                     <button onclick="addKvRow('headers-list');saveTabData()" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add</button>
                 </div>
+                <div id="tab-cookies" class="tab-content space-y-2 hidden">
+                    <div id="cookies-list"></div>
+                    <button onclick="addKvRow('cookies-list');saveTabData()" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add</button>
+                </div>
                 <div id="tab-body" class="tab-content space-y-2 hidden">
                     <div class="flex gap-4 text-xs">
                         <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="none" checked onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">None</span></label>
-                        <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="json" onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">JSON</span></label>
                         <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="form-data" onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">Form Data</span></label>
+                        <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="raw" onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">Raw</span></label>
+                        <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="json" onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">JSON</span></label>
+                    </div>
+                    <div id="body-raw" class="hidden">
+                        <textarea id="raw-body" rows="4" class="w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder="Plain text body"></textarea>
                     </div>
                     <div id="body-json" class="hidden">
                         <textarea id="json-body" rows="4" class="w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder='{"key": "value"}'></textarea>
@@ -176,12 +183,7 @@
                         <button onclick="addKvRow('form-list');saveTabData()" class="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Add</button>
                     </div>
                 </div>
-                <div id="tab-scripts" class="tab-content space-y-2 hidden text-surface-400 text-xs">
-                    <p>Scripts coming soon...</p>
-                </div>
-                <div id="tab-settings" class="tab-content space-y-2 hidden text-surface-400 text-xs">
-                    <p>Settings coming soon...</p>
-                </div>
+
             </section>
 
             <!-- Resize Handle -->

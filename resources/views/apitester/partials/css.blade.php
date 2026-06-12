@@ -208,12 +208,7 @@
     }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-    /* Request Tab Switch Visibility */
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-    
-    .resp-content { display: none; }
-    .resp-content.active { display: block; }
+
 
     /* Resize Handle */
     .resize-handle {

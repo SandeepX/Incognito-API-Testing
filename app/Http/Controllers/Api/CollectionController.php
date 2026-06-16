@@ -25,11 +25,9 @@ class CollectionController extends Controller
             ->orderBy('name');
 
         if ($request->has('workspace_id')) {
-            // Ensure user has access to this specific workspace
             if ($userWorkspaceIds->contains($request->workspace_id)) {
                 $query->where('workspace_id', $request->workspace_id);
             } else {
-                // Return empty collection if user doesn't have access
                 return CollectionResource::collection(collect());
             }
         }
@@ -39,7 +37,6 @@ class CollectionController extends Controller
 
     public function store(StoreCollectionRequest $request)
     {
-        // Ensure user has access to the workspace
         $workspaceId = $request->validated('workspace_id');
         if (!Auth::user()->workspaces()->where('workspaces.id', $workspaceId)->exists()) {
             abort(403, 'You do not have access to this workspace');
@@ -56,7 +53,6 @@ class CollectionController extends Controller
 
     public function update(UpdateCollectionRequest $request, Collection $collection)
     {
-        // Ensure user has access to the collection's workspace
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }
@@ -68,7 +64,6 @@ class CollectionController extends Controller
 
     public function destroy(Collection $collection)
     {
-        // Ensure user has access to the collection's workspace
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }

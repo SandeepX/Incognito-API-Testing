@@ -15,7 +15,6 @@ class WorkspaceMemberController extends Controller
 {
     public function index(Workspace $workspace): JsonResponse
     {
-        // Ensure user is a member of this workspace
         if (!Auth::user()->workspaces()->where('workspace_id', $workspace->id)->exists()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
@@ -48,7 +47,6 @@ class WorkspaceMemberController extends Controller
 
     public function createInvite(Request $request, Workspace $workspace): JsonResponse
     {
-        // Only owner and admins can invite
         $user = Auth::user();
         $pivot = $user->workspaces()->where('workspace_id', $workspace->id)->first()?->pivot;
 
@@ -90,14 +88,12 @@ class WorkspaceMemberController extends Controller
             return redirect('/')->with('error', 'This invite link is invalid or has expired.');
         }
 
-        // Redirect to login if not authenticated
         if (!Auth::check()) {
             return redirect()->route('login')->with('info', 'Please sign in to accept the workspace invite.');
         }
 
         $user = Auth::user();
 
-        // Check if already a member
         if ($user->workspaces()->where('workspace_id', $invite->workspace_id)->exists()) {
             return redirect('/')->with('info', 'You are already a member of this workspace.');
         }
@@ -112,9 +108,7 @@ class WorkspaceMemberController extends Controller
         $currentUser = Auth::user();
         $pivot = $currentUser->workspaces()->where('workspace_id', $workspace->id)->first()?->pivot;
 
-        // Only owner can remove members (or remove yourself)
         if ($currentUser->id === $user->id) {
-            // User leaving workspace
             $workspace->users()->detach($user->id);
             return response()->json(['message' => 'You have left the workspace']);
         }

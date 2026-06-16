@@ -10,7 +10,12 @@ class Environment extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['id', 'name', 'variables', 'workspace_id'];
+    protected $fillable = [
+        'id',
+        'name',
+        'variables',
+        'workspace_id'
+    ];
 
     protected $casts = [
         'variables' => 'array',

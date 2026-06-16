@@ -85,38 +85,42 @@
 
     <div class="flex flex-1 overflow-hidden">
         <!-- Sidebar - Postman Style (Vertical Icon Bar) -->
-        <aside class="w-16 bg-surface-800 dark:bg-surface-900 border-r border-surface-700 dark:border-surface-800 shrink-0 flex flex-col items-center py-4 gap-4 shadow-lg overflow-y-auto">
+        <aside class="w-20 bg-surface-800 dark:bg-surface-900 border-r border-surface-700 dark:border-surface-800 shrink-0 flex flex-col items-center py-4 gap-3 shadow-lg overflow-y-auto">
             <!-- Collections -->
             <button onclick="showSidebar('collections')" id="sb-collections-icon" class="sidebar-icon active" title="Collections">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7M3 7a2 2 0 012-2h14a2 2 0 012 2m0 0V5a2 2 0 00-2-2H5a2 2 0 00-2 2v2"/></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <span class="text-[10px] font-medium leading-tight mt-0.5">Collection</span>
             </button>
             
             <!-- Environments -->
             <button onclick="showSidebar('environments')" id="sb-environments-icon" class="sidebar-icon" title="Environments">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/></svg>
+                <span class="text-[10px] font-medium leading-tight mt-0.5">Environment</span>
             </button>
             
             <!-- Flows -->
             <button onclick="showSidebar('flows')" id="sb-flows-icon" class="sidebar-icon" title="Flows">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                <span class="text-[10px] font-medium leading-tight mt-0.5">Flows</span>
             </button>
             
             <!-- History -->
             <button onclick="showSidebar('history')" id="sb-history-icon" class="sidebar-icon" title="History">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 2m6-11a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 2m6-11a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span class="text-[10px] font-medium leading-tight mt-0.5">History</span>
             </button>
         </aside>
 
         <!-- Main Sidebar Panel -->
-        <aside id="sidebar-panel" class="w-72 bg-surface-750 dark:bg-surface-850 border-r border-surface-700 dark:border-surface-800 shrink-0 flex flex-col overflow-hidden shadow-lg hidden">
+        <aside id="sidebar-panel" class="bg-white dark:bg-surface-850 border-r border-surface-200 dark:border-surface-800 shrink-0 flex flex-col overflow-hidden shadow-lg hidden">
             <!-- Header -->
-            <div class="px-4 py-3 border-b border-surface-700 dark:border-surface-800 bg-surface-800 dark:bg-surface-900">
-                <h3 id="sidebar-title" class="text-sm font-semibold text-surface-100"></h3>
+            <div class="sidebar-panel-header">
+                <h3 id="sidebar-title"></h3>
             </div>
             
             <!-- Content -->
             <div id="sb-history" class="flex-1 overflow-y-auto text-xs hidden"></div>
-            <div id="sb-collections" class="flex-1 overflow-y-auto text-xs hidden"></div>
+            <div id="sb-collections" class="flex-1 overflow-y-auto text-xs hidden text-surface-700 dark:text-surface-300"></div>
             <div id="sb-environments" class="flex-1 overflow-y-auto text-xs hidden"></div>
             <div id="sb-flows" class="flex-1 overflow-y-auto text-xs hidden flex items-center justify-center text-surface-500">
                 <p class="text-center">Flows coming soon</p>
@@ -124,7 +128,7 @@
         </aside>
 
         <!-- Main -->
-        <main class="flex-1 flex flex-col overflow-hidden bg-surface-900">
+        <main class="flex-1 flex flex-col overflow-hidden bg-surface-100 dark:bg-surface-900">
             <!-- Request Tabs Bar -->
             <div class="bg-surface-800 dark:bg-surface-850 border-b border-surface-700 dark:border-surface-800 px-4 py-1 shrink-0">
                 <!-- Request Tabs (Method + URL from collections) -->
@@ -207,10 +211,10 @@
                         <label class="flex items-center gap-1.5 cursor-pointer group"><input type="radio" name="bodyType" value="json" onchange="toggleBodyType()" class="accent-blue-500"> <span class="text-surface-300 group-hover:text-surface-100">JSON</span></label>
                     </div>
                     <div id="body-raw" class="hidden">
-                        <textarea id="raw-body" rows="4" class="w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder="Plain text body"></textarea>
+                        <textarea id="raw-body" rows="10" class="body-textarea w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder="Plain text body"></textarea>
                     </div>
                     <div id="body-json" class="hidden">
-                        <textarea id="json-body" rows="4" class="w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder='{"key": "value"}'></textarea>
+                        <textarea id="json-body" rows="10" class="body-textarea w-full border border-surface-600 dark:border-surface-700 rounded px-3 py-2.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-surface-700 dark:bg-surface-750 text-surface-100 transition-colors leading-relaxed" placeholder='{"key": "value"}'></textarea>
                     </div>
                     <div id="body-form" class="hidden space-y-2">
                         <div id="form-list"></div>

@@ -29,7 +29,6 @@ class WorkspaceController extends Controller
             'owner_id' => Auth::id(),
         ]);
 
-        // Attach the creator as owner
         $workspace->users()->attach(Auth::id(), ['role' => 'owner']);
 
         return new WorkspaceResource($workspace);
@@ -37,7 +36,6 @@ class WorkspaceController extends Controller
 
     public function update(UpdateWorkspaceRequest $request, Workspace $workspace)
     {
-        // Ensure user belongs to this workspace
         if (!Auth::user()->workspaces()->where('workspace_id', $workspace->id)->exists()) {
             abort(403);
         }
@@ -49,7 +47,6 @@ class WorkspaceController extends Controller
 
     public function destroy(Workspace $workspace)
     {
-        // Only owner can delete
         if ($workspace->owner_id !== Auth::id()) {
             abort(403);
         }

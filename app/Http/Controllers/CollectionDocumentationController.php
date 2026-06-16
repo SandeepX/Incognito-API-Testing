@@ -14,12 +14,10 @@ class CollectionDocumentationController extends Controller
             $q->orderBy('order');
         }, 'workspace']);
 
-        // Ensure user has access
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }
 
-        // Build a tree from flat items
         $tree = $this->buildTree($collection->allItems);
 
         return view('apitester.docs', [

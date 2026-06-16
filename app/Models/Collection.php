@@ -11,7 +11,11 @@ class Collection extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['id', 'workspace_id', 'name'];
+    protected $fillable = [
+        'id',
+        'workspace_id',
+        'name'
+    ];
 
     protected $casts = [
         'created_at' => 'datetime',

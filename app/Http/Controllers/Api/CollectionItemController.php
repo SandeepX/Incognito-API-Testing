@@ -21,7 +21,6 @@ class CollectionItemController extends Controller
             $q->with('children')->orderBy('order');
         }])->findOrFail($collectionId);
 
-        // Ensure user has access to the collection's workspace
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }
@@ -33,7 +32,6 @@ class CollectionItemController extends Controller
     {
         $collection = Collection::findOrFail($collectionId);
 
-        // Ensure user has access to the collection's workspace
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }
@@ -61,7 +59,6 @@ class CollectionItemController extends Controller
 
     public function update(UpdateCollectionItemRequest $request, CollectionItem $collectionItem)
     {
-        // Ensure user has access to the collection's workspace
         $collection = $collectionItem->collection;
         if (!$collection || !Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
@@ -74,7 +71,6 @@ class CollectionItemController extends Controller
 
     public function destroy(CollectionItem $collectionItem)
     {
-        // Ensure user has access to the collection's workspace
         $collection = $collectionItem->collection;
         if (!$collection || !Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
@@ -89,7 +85,6 @@ class CollectionItemController extends Controller
     {
         $collection = Collection::findOrFail($collectionId);
 
-        // Ensure user has access to the collection's workspace
         if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
             abort(403);
         }

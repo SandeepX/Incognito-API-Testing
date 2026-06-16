@@ -2,6 +2,8 @@
 // ========= STATE =========
 let tabs = [], activeTab = null, tabCounter = 0, activeRespFormat = 'pretty', currentAbort = null;
 let envs = [], colls = [], works = [];
+let selectionMode = false;
+let selectedItems = new Set();
 
 function defaultReq() {
     return { method:'GET', url:'', params:[], headers:[], cookies:[], bodyType:'none', body:'', rawBody:'', formData:[], auth:{ type:'none', bearer:'', username:'', password:'', keyName:'X-API-Key', keyValue:'' } };
@@ -17,6 +19,121 @@ function isJson(s){if(!s||typeof s!='string')return 0;try{JSON.parse(s);return 1
 function synHl(j){return j.replace(/("(?:[^"\\]|\\.)*")\s*:/g,'<span class="json-key">$1</span>:').replace(/:(\s*)"((?:[^"\\]|\\.)*)"/g,':<span class="json-string">"$2"</span>').replace(/:\s*(\d+(?:\.\d+)?)/g,':<span class="json-number">$1</span>').replace(/:\s*(true|false)/g,':<span class="json-bool">$1</span>').replace(/:\s*(null)/g,':<span class="json-null">$1</span>');}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function csrf(){return $('meta[name="csrf-token"]').attr('content')||'';}
+
+// ========= DRAG & DROP =========
+let dragData = null;
+
+function dragStart(e, itemId, collectionId, type) {
+    dragData = { itemId, collectionId, type };
+    e.originalEvent.dataTransfer.effectAllowed = 'move';
+    e.originalEvent.dataTransfer.setData('text/plain', itemId);
+    const $el = $(e.target).closest('[draggable]');
+    $el.addClass('dragging');
+    
+    // Create a custom drag ghost image
+    const $ghost = $el.clone().addClass('drag-ghost').css({
+        position: 'absolute',
+        top: '-9999px',
+        left: '-9999px',
+        width: $el.outerWidth() + 'px',
+        padding: '8px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        borderRadius: '6px',
+        background: '#1e293b'
+    });
+    $('body').append($ghost);
+    e.originalEvent.dataTransfer.setDragImage($ghost[0], 20, 20);
+    setTimeout(() => $ghost.remove(), 0);
+}
+
+function dragEnd() {
+    dragData = null;
+    $('.dragging').removeClass('dragging');
+    $('.drag-over').removeClass('drag-over');
+    $('.reorder-drop-top, .reorder-drop-bottom').removeClass('reorder-drop-top reorder-drop-bottom');
+}
+
+// Check if targetId is a descendant (child, grandchild, etc.) of parentId in the items tree
+function isDescendant(parentId, targetId, items) {
+    for (const item of items) {
+        if (item.id === parentId) {
+            // Found the parent folder — search its children for targetId
+            return isInSubtree(targetId, item.children || []);
+        }
+        if (item.children && item.children.length) {
+            const found = isDescendant(parentId, targetId, item.children);
+            if (found) return true;
+        }
+    }
+    return false;
+}
+
+// Check if targetId exists anywhere in the given subtree
+function isInSubtree(targetId, items) {
+    for (const item of items) {
+        if (item.id === targetId) return true;
+        if (item.children && item.children.length) {
+            if (isInSubtree(targetId, item.children)) return true;
+        }
+    }
+    return false;
+}
+
+async function dropOnFolder(e, targetFolderId, collectionId) {
+    e.preventDefault();
+    $(e.target).closest('.folder-header').removeClass('drag-over');
+    if (!dragData) return;
+    
+    // Prevent dropping a folder into itself
+    if (dragData.itemId === targetFolderId) {
+        toast('Cannot drop a folder into itself');
+        return;
+    }
+    
+    // Prevent dropping a folder into its own descendants (circular reference)
+    if (dragData.type === 'folder') {
+        const isCircular = isDescendant(dragData.itemId, targetFolderId, 
+            colls.find(c => c.id === collectionId)?.items || []);
+        if (isCircular) {
+            toast('Cannot move a folder into its own subfolder');
+            return;
+        }
+    }
+    
+    try {
+        await api('/collections/' + collectionId + '/reorder', {
+            method: 'POST',
+            body: JSON.stringify({
+                items: [{ id: dragData.itemId, parent_id: targetFolderId, order: 0 }]
+            })
+        });
+        await renderCollections();
+        toast('Moved');
+    } catch {
+        toast('Failed to move');
+    }
+}
+
+async function dropOnCollection(e, collectionId) {
+    e.preventDefault();
+    $(e.target).closest('.collection-drop-zone').removeClass('drag-over');
+    if (!dragData) return;
+    
+    try {
+        await api('/collections/' + collectionId + '/reorder', {
+            method: 'POST',
+            body: JSON.stringify({
+                items: [{ id: dragData.itemId, parent_id: null, order: 0 }]
+            })
+        });
+        await renderCollections();
+        toast('Moved to root');
+    } catch {
+        toast('Failed to move');
+    }
+}
 
 // ========= CONTEXT MENU =========
 let ctxMenu = null;
@@ -88,7 +205,7 @@ function promptNewTab(){
 function renderTabs(){
     const $l=$('#tabs-list'); $l.empty();
     $.each(tabs,(i,t)=>{
-        const $d=$('<div>',{class:'tab'+(t.id===activeTab?' active':''),style:'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;margin:0 2px;background:'+(t.id===activeTab?'#3b82f6':'#334155')+';color:'+(t.id===activeTab?'white':'#cbd5e1')+';border-radius:4px;font-size:12px;cursor:pointer;border-right:1px solid #475569;transition:all 0.15s;'}).on('click',()=>activateTab(t.id)).on('contextmenu',function(e){
+        const $d=$('<div>',{class:'tab'+(t.id===activeTab?' active':''),style:'display:inline-flex;align-items:center;gap:6px;padding:6px 12px;margin:0 2px;border-radius:4px;font-size:12px;cursor:pointer;transition:all 0.15s;'}).on('click',()=>activateTab(t.id)).on('contextmenu',function(e){
             e.preventDefault(); const self=this;
             showCtxMenu(e.clientX,e.clientY,[
                 {label:'✎ Rename',action:()=>{$(self).find('.tab-label').dblclick();}},
@@ -219,32 +336,47 @@ function findVars(str){const vars=[],re=/\{\{(\w+)\}\}/g;let m;while((m=re.exec(
 function updateVarPreview(){highlightVars();}
 function updateFieldVarBadges(){
     const env=getActiveEnv();
-    $('.kv-row input:nth-child(2)').each(function(){
-        const v=findVars($(this).val()||''), $badge=$(this).siblings('.field-var-badge');
+    
+    // Helper: add/remove badge chips and .has-vars class on a single input element
+    function applyVarHighlight($input) {
+        if(!$input.length) return;
+        const v=findVars($input.val()||''), $badge=$input.siblings('.field-var-badge');
         if(v.length&&env){
-            if(!$badge.length){$badge=$('<span>',{class:'field-var-badge'});$(this).after($badge);}
-            $badge.html(v.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Not found">${esc(x.raw)}</span>`;}).join(' '));
-        }else if($badge.length)$badge.remove();
-    });
+            if(!$badge.length){$badge=$('<span>',{class:'field-var-badge'});$input.after($badge);}
+            $badge.html(v.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="Resolves to: ${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Variable not found in environment">${esc(x.raw)}</span>`;}).join(' '));
+            $input.addClass('has-vars');
+        } else {
+            $input.removeClass('has-vars');
+            if($badge.length) $badge.remove();
+        }
+    }
+    
+    // KV row values (headers, params, cookies, form data) — second input in each row
+    $('.kv-row input:nth-child(2)').each(function(){ applyVarHighlight($(this)); });
+    
+    // Auth fields — bearer token, basic auth username/password, API key name/value
+    $('#auth-bearer-token, #auth-username, #auth-password, #auth-key-name, #auth-key-value').each(function(){ applyVarHighlight($(this)); });
+    
+    // Body fields
     const bodyVars=findVars($('#json-body').val()||''), $bodyBadge=$('#body-var-badge');
     if(bodyVars.length&&env){
-        const names=bodyVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Not found">${esc(x.raw)}</span>`;}).join(' ');
-        if(!$bodyBadge.length)$('#body-json').append($('<div>',{id:'body-var-badge',class:'flex flex-wrap gap-1 mt-1'}).html(names));
-        else $bodyBadge.html(names);
-    }else if($bodyBadge.length)$bodyBadge.remove();
+        if(!$bodyBadge.length)$('#body-json').append($('<div>',{id:'body-var-badge',class:'flex flex-wrap gap-1 mt-1'}).html(bodyVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="Resolves to: ${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Variable not found">${esc(x.raw)}</span>`;}).join(' ')));
+        else $bodyBadge.html(bodyVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="Resolves to: ${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Variable not found">${esc(x.raw)}</span>`;}).join(' '));
+        $('#json-body').addClass('has-vars');
+    } else {
+        if($bodyBadge.length)$bodyBadge.remove();
+        $('#json-body').removeClass('has-vars');
+    }
+    
     const rawVars=findVars($('#raw-body').val()||''), $rawBadge=$('#raw-var-badge');
     if(rawVars.length&&env){
-        const names=rawVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Not found">${esc(x.raw)}</span>`;}).join(' ');
-        if(!$rawBadge.length)$('#body-raw').append($('<div>',{id:'raw-var-badge',class:'flex flex-wrap gap-1 mt-1'}).html(names));
-        else $rawBadge.html(names);
-    }else if($rawBadge.length)$rawBadge.remove();
-    $('#auth-bearer-token, #auth-username, #auth-password, #auth-key-name, #auth-key-value').each(function(){
-        const v=findVars($(this).val()||''), $badge=$(this).siblings('.field-var-badge');
-        if(v.length&&env){
-            if(!$badge.length){$badge=$('<span>',{class:'field-var-badge'});$(this).after($badge);}
-            $badge.html(v.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Not found">${esc(x.raw)}</span>`;}).join(' '));
-        }else if($badge.length)$badge.remove();
-    });
+        if(!$rawBadge.length)$('#body-raw').append($('<div>',{id:'raw-var-badge',class:'flex flex-wrap gap-1 mt-1'}).html(rawVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="Resolves to: ${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Variable not found">${esc(x.raw)}</span>`;}).join(' ')));
+        else $rawBadge.html(rawVars.map(x=>{const vd=env.variables.find(ev=>ev.key===x.name&&ev.enabled!==false);return vd?`<span class="var-badge var-badge-found" title="Resolves to: ${esc(vd.value)}">${esc(x.raw)}</span>`:`<span class="var-badge var-badge-missing" title="Variable not found">${esc(x.raw)}</span>`;}).join(' '));
+        $('#raw-body').addClass('has-vars');
+    } else {
+        if($rawBadge.length)$rawBadge.remove();
+        $('#raw-body').removeClass('has-vars');
+    }
 }
 
 // ========= API HELPERS =========
@@ -261,7 +393,11 @@ async function renderEnvironments(){
     $.each(envs,(i,e)=>{$sel.append($('<option>',{value:e.id}).text(e.name+(e.id===active?' (active)':'')));});
     if(active)$sel.val(active); else $sel.val('');
     const $el=$('#sb-environments'); $el.empty();
-    if(!envs.length){$el.html('<div class="flex flex-col items-center justify-center h-32 text-surface-300 dark:text-surface-600 text-xs gap-2"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg><span>No environments</span></div>');return;}
+    $el.append($('<div>',{class:'flex gap-1 px-2 py-1.5 border-b border-surface-100 dark:border-surface-700'}).append(
+        $('<button>',{class:'text-[10px] px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-400 transition font-medium'}).text('+ Environment').on('click',quickAddEnvironment),
+        $('<button>',{class:'text-[10px] px-2 py-1 rounded bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600 transition font-medium ml-auto'}).text('Manage').on('click',manageEnvironments)
+    ));
+    if(!envs.length){$el.append($('<div>',{class:'flex flex-col items-center justify-center h-32 text-surface-300 dark:text-surface-600 text-xs gap-2'}).append($('<svg>',{class:'w-6 h-6',fill:'none',stroke:'currentColor',viewBox:'0 0 24 24'}).html('<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'),$('<span>').text('No environments')));return;}
     $.each(envs,(i,e)=>{
         const $d=$('<div>',{class:'sidebar-item p-2 rounded-md flex gap-2 items-start'+(e.id===active?' active':'')}).on('click',()=>{localStorage.setItem('incognito-active-env',e.id);renderEnvironments();toast('Active: '+e.name);});
         $d.append($('<span>',{class:'badge-dot bg-brand-500 shrink-0 mt-1'}));
@@ -270,6 +406,11 @@ async function renderEnvironments(){
         $el.append($d);
     });
 }
+async function quickAddEnvironment(){
+    Swal.fire({title:'New Environment',input:'text',inputPlaceholder:'Environment name',showCancelButton:true,confirmButtonText:'Create',preConfirm:n=>{if(!n.trim())Swal.showValidationMessage('Name required');}})
+        .then(async r=>{if(r.isConfirmed){await api('/environments',{method:'POST',body:JSON.stringify({name:r.value.trim(),variables:[]})});await renderEnvironments();toast('Environment created');}});
+}
+
 function manageEnvironments(){
     let html='<div style="max-height:60vh;overflow-y:auto"><div style="display:flex;gap:8px;margin-bottom:8px"><button class="add-env-btn modal-btn-primary">+ New Environment</button></div><div id="env-manager-list">';
     $.each(envs,(i,e)=>{
@@ -327,18 +468,73 @@ async function deleteEnv(id){
 async function renderCollections(){
     await fetchColls();
     const $el=$('#sb-collections'); $el.empty();
-    $el.append($('<div>',{class:'flex gap-1 px-2 py-1.5 border-b border-surface-100 dark:border-surface-700'}).append(
-        $('<button>',{class:'text-[10px] px-2 py-1 rounded bg-brand-500 text-white hover:bg-brand-400 transition font-medium'}).text('+ Collection').on('click',createCollection),
-        $('<button>',{class:'text-[10px] px-2 py-1 rounded bg-surface-100 dark:bg-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-600 transition font-medium ml-auto'}).text('Import').on('click',importCollection)
+    
+    // Action bar - Postman style
+    $el.append($('<div>',{class:'coll-action-bar'}).append(
+        $('<button>',{class:'coll-action-btn primary'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> New').on('click',createCollection),
+        $('<button>',{class:'coll-action-btn'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3"/></svg> Import').on('click',importCollection),
+        $('<button>',{class:'coll-action-btn'+(selectionMode?' active':''),id:'sel-toggle-btn'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg> '+(selectionMode?'Done':'Select')).on('click',toggleSelectionMode)
     ));
-    if(!colls.length){$el.append($('<div>',{class:'flex flex-col items-center justify-center h-32 text-surface-300 dark:text-surface-600 text-xs gap-2'}).append($('<svg>',{class:'w-6 h-6',fill:'none',stroke:'currentColor',viewBox:'0 0 24 24'}).html('<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>'),$('<span>').text('No collections')));return;}
-    $.each(colls,(i,c)=>{const $c=$('<div>');$c.append(renderCollItem(c));$el.append($c);});
+    
+    // Bulk action bar
+    const $bulkBar = $('<div>',{id:'bulk-action-bar',class:selectionMode?'show':''}).append(
+        $('<span>',{class:'bulk-count',id:'bulk-count'}).text('0 selected'),
+        $('<button>',{class:'bulk-btn move',id:'bulk-move-btn'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg> Move').on('click',bulkMoveSelected),
+        $('<button>',{class:'bulk-btn delete',id:'bulk-delete-btn'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg> Delete').on('click',bulkDeleteSelected),
+        $('<button>',{class:'bulk-btn deselect',id:'bulk-deselect-btn'}).text('Deselect All').on('click',function(){selectedItems.clear();updateBulkBar();renderCollections();})
+    );
+    $el.append($bulkBar);
+    
+    // Search bar
+    const $searchWrap = $('<div>',{class:'collections-search'});
+    $searchWrap.append($('<span>',{class:'search-icon'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>'));
+    $searchWrap.append($('<input>',{type:'text',placeholder:'Search collections...',id:'coll-search-input'}));
+    $el.append($searchWrap);
+    
+    // Collection list container
+    const $list = $('<div>',{id:'coll-list'});
+    $el.append($list);
+    
+    function renderCollList(filter) {
+        $list.empty();
+        const filtered = filter ? colls.filter(c => c.name.toLowerCase().includes(filter.toLowerCase())) : colls;
+        if(!filtered.length){
+            const msg = filter ? 'No collections match "' + esc(filter) + '"' : 'No collections yet';
+            $list.append($('<div>',{class:'flex flex-col items-center justify-center h-32 text-surface-300 dark:text-surface-600 text-xs gap-2'}).append(
+                $('<svg>',{class:'w-7 h-7',fill:'none',stroke:'currentColor',viewBox:'0 0 24 24'}).html('<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>'),
+                $('<span>').text(msg)
+            ));
+            return;
+        }
+        $.each(filtered,(i,c)=>{const $c=$('<div>');$c.append(renderCollItem(c));$list.append($c);});
+    }
+    
+    renderCollList('');
+    
+    // Debounced search (use .off().on() to prevent handler leaks)
+    let searchTimer;
+    $('#coll-search-input').off('input').on('input', function(){
+        clearTimeout(searchTimer);
+        const val = $(this).val();
+        searchTimer = setTimeout(() => renderCollList(val), 150);
+    });
 }
 function renderCollItem(c){
+    // Count items and folders
+    let reqCount = 0, folderCount = 0;
+    function countItems(items) {
+        if(!items) return;
+        $.each(items, (i, it) => {
+            if(it.type === 'folder') { folderCount++; if(it.children) countItems(it.children); }
+            else reqCount++;
+        });
+    }
+    countItems(c.items);
+    
     const $d=$('<div>',{class:'collection-item group'}).on('contextmenu',function(e){
         e.preventDefault();
         showCtxMenu(e.clientX,e.clientY,[
-            {label:'&#9998; Rename',action:()=>renameCollection(c.id,$(this).find('span:first')[0])},
+            {label:'&#9998; Rename',action:()=>renameCollection(c.id,$(this).find('.coll-name')[0])},
             {label:'&#128193; Add Folder',action:()=>addFolderToColl(c.id)},
             {label:'&#43; Add Request',action:()=>addReqToColl(c.id)},
             {divider:true},
@@ -348,62 +544,240 @@ function renderCollItem(c){
             {label:'&#10005; Delete',danger:true,action:()=>deleteColl(c.id)}
         ]);
     });
-    $d.append($('<span>',{class:'flex-1 truncate text-surface-700 dark:text-surface-300 font-medium'}).text(c.name).on('dblclick',function(){renameCollection(c.id,this);}));
-    const $actions=$('<span>',{class:'ml-auto flex gap-0.5 opacity-0 group-hover:opacity-100 transition text-surface-400'});
-    $actions.append($('<button>',{class:'hover:text-brand-500 px-0.5',title:'Add Folder'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V9a2 2 0 00-2-2h-2.586A2 2 0 0012 4.414L10.586 3H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>').on('click',function(e){e.stopPropagation();addFolderToColl(c.id);}));
-    $actions.append($('<button>',{class:'hover:text-brand-500 px-0.5',title:'Add Request'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>').on('click',function(e){e.stopPropagation();addReqToColl(c.id);}));
-    $actions.append($('<button>',{class:'hover:text-indigo-400 px-0.5',title:'Documentation'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>').on('click',function(e){e.stopPropagation();viewDocs(c.id);}));
-    $actions.append($('<button>',{class:'hover:text-blue-500 px-0.5',title:'Export'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5 5 5-5M12 4v11"/></svg>').on('click',function(e){e.stopPropagation();exportColl(c.id);}));
-    $actions.append($('<button>',{class:'hover:text-red-500 px-0.5',title:'Delete'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>').on('click',function(e){e.stopPropagation();deleteColl(c.id);}));
-    $d.append($actions);
+    
+    // Collection icon with gradient
+    const $icon = $('<div>',{class:'coll-icon collection'}).text(c.name.charAt(0).toUpperCase());
+    $d.append($icon);
+    
+    // Info section
+    const $info = $('<div>',{class:'coll-info'});
+    const $name = $('<div>',{class:'coll-name truncate'}).text(c.name).on('dblclick',function(e){e.stopPropagation();renameCollection(c.id,this);});
+    const $meta = $('<div>',{class:'coll-meta'});
+    if(reqCount > 0) $meta.append($('<span>',{class:'coll-count'}).text(reqCount + (reqCount === 1 ? ' request' : ' requests')));
+    if(folderCount > 0) $meta.append($('<span>',{class:'coll-folder-count'}).text(folderCount + (folderCount === 1 ? ' folder' : ' folders')));
+    if(!reqCount && !folderCount) $meta.text('Empty collection');
+    $info.append($name, $meta);
+    $d.append($info);
+    
+    // Hover toolbar (Postman-style)
+    const $toolbar = $('<span>',{class:'coll-hover-toolbar ml-auto'});
+    $toolbar.append($('<button>',{class:'coll-hover-btn',title:'Add Folder'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V9a2 2 0 00-2-2h-2.586A2 2 0 0012 4.414L10.586 3H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>').on('click',function(e){e.stopPropagation();addFolderToColl(c.id);}));
+    $toolbar.append($('<button>',{class:'coll-hover-btn',title:'Add Request'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>').on('click',function(e){e.stopPropagation();addReqToColl(c.id);}));
+    $toolbar.append($('<button>',{class:'coll-hover-btn',title:'View Docs'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>').on('click',function(e){e.stopPropagation();viewDocs(c.id);}));
+    $toolbar.append($('<button>',{class:'coll-hover-btn danger',title:'Delete'}).html('<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>').on('click',function(e){e.stopPropagation();deleteColl(c.id);}));
+    $d.append($toolbar);
+    
+    // Children tree
+    const $child=$('<div>',{class:'tree-children'});
     if(c.items&&c.items.length){
-        const $child=$('<div>',{class:'tree-children'});
-        $.each(c.items,(j,item)=>{$child.append(renderCollTreeItem(item,c.id));});
-        $d.wrap('<div></div>'); const $wrap=$d.parent(); $wrap.append($child); return $wrap;
+        $.each(c.items,(j,item)=>{$child.append(renderCollTreeItem(item,c.id, null));});
     }
-    return $d;
+    // Add drop zone at root level
+    $child.append($('<div>',{class:'collection-drop-zone text-[10px] text-center py-2.5 text-surface-400 dark:text-surface-600 border-2 border-dashed border-transparent rounded transition-all',text:'Drop here to move to root'}).on('dragover',function(e){e.preventDefault();$(this).addClass('drag-over');}).on('dragenter',function(e){e.preventDefault();$(this).addClass('drag-over');}).on('dragleave',function(){$(this).removeClass('drag-over');}).on('drop',function(e){dropOnCollection(e,c.id);}));
+    $d.wrap('<div></div>'); const $wrap=$d.parent(); $wrap.append($child); return $wrap;
 }
-function renderCollTreeItem(item,collectionId){
+function renderCollTreeItem(item,collectionId,parentId){
     if(item.type==='folder'){
-        const $d=$('<div>');
-        const $h=$('<div>',{class:'flex items-center gap-1 py-0.5 text-xs text-surface-600 dark:text-surface-400 hover:text-surface-800 dark:hover:text-surface-200 cursor-pointer group rounded px-1 hover:bg-surface-50 dark:hover:bg-surface-700'}).on('contextmenu',function(e){
+        const $d=$('<div>',{class:'reorder-container', 'data-item-id':item.id, 'data-parent-id':parentId||'', 'data-collection-id':collectionId});
+        const $dragHandle=$('<span>',{class:'drag-handle shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-surface-400 hover:text-blue-400 transition',draggable:true,title:'Drag to move'}).html('<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>').on('dragstart',function(e){dragStart(e,item.id,collectionId,'folder');e.stopPropagation();}).on('dragend',dragEnd);
+        
+        const $h=$('<div>',{class:'folder-header'+(selectedItems.has(item.id)?' sel-highlight':'')}).on('contextmenu',function(e){
             e.preventDefault();
+            if(selectionMode) return;
             showCtxMenu(e.clientX,e.clientY,[
                 {label:'&#9998; Rename',action:()=>renameItem(item.id,$(this).find('.truncate'))},
+                {label:'&#128193; Add Subfolder',action:()=>addSubfolderToColl(collectionId,item.id)},
                 {label:'&#43; Add Request',action:()=>addReqToFolder(collectionId,item.id)},
                 {divider:true},
                 {label:'&#10005; Delete Folder',danger:true,action:()=>deleteCollItem(collectionId,item.id)}
             ]);
-        });
-        const $tog=$('<span>',{class:'text-surface-400 text-[10px] w-3 text-center transition-transform'}).html('&#9654;');
+        }).on('dragover',function(e){e.preventDefault();}).on('dragenter',function(e){e.preventDefault();$(this).addClass('drag-over');}).on('dragleave',function(){$(this).removeClass('drag-over');}).on('drop',function(e){dropOnFolder(e,item.id,collectionId);});
+        
+        // Selection checkbox
+        if(selectionMode) {
+            const $cb = $('<span>',{class:'sel-checkbox'+(selectedItems.has(item.id)?' checked':'')}).on('click',function(e){e.stopPropagation();toggleSelectItem(item.id);});
+            $h.prepend($cb);
+        }
+        $h.append($dragHandle);
+        
+        const $tog=$('<span>',{class:'folder-toggle'}).html('&#9654;');
         $h.append($tog);
-        $h.append($('<span>',{class:'text-surface-500'}).html('&#128193;'));
-        $h.append($('<span>',{class:'flex-1 truncate font-medium'}).text(item.name));
-        const $actions=$('<span>',{class:'ml-auto flex gap-0.5 opacity-0 group-hover:opacity-100 transition'});
-        $actions.append($('<button>',{class:'hover:text-brand-500 text-[10px] px-0.5',title:'Add Request'}).html('+').on('click',function(e){e.stopPropagation();addReqToFolder(collectionId,item.id);}));
-        $actions.append($('<button>',{class:'hover:text-red-500 text-[10px] px-0.5',html:'&times;'}).on('click',function(e){e.stopPropagation();deleteCollItem(collectionId,item.id);}));
-        $h.append($actions);
-        $h.on('click',function(){const $children=$d.find('> .tree-children');$children.toggleClass('hidden');$tog.toggleClass('rotate-90');if($children.hasClass('hidden'))$tog.css('transform','');else $tog.css('transform','rotate(90deg)');});
+        $h.append($('<svg class="folder-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg>'));
+        $h.append($('<span>',{class:'flex-1 truncate font-medium text-[12px]'}).text(item.name));
+        
+        // Hover toolbar
+        const $toolbar=$('<span>',{class:'coll-hover-toolbar ml-auto'});
+        $toolbar.append($('<button>',{class:'coll-hover-btn',title:'Add Request'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>').on('click',function(e){e.stopPropagation();addReqToFolder(collectionId,item.id);}));
+        $toolbar.append($('<button>',{class:'coll-hover-btn danger',title:'Delete'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>').on('click',function(e){e.stopPropagation();deleteCollItem(collectionId,item.id);}));
+        $h.append($toolbar);
+        
+        $h.on('click',function(){const $children=$d.find('> .tree-children');$children.toggleClass('hidden');$tog.toggleClass('open');});
         $d.append($h);
+        
         const $child=$('<div>',{class:'tree-children'});
-        if(item.children){$.each(item.children,(k,ch)=>{$child.append(renderCollTreeItem(ch,collectionId));});}
-        $d.append($child); return $d;
+        if(item.children){$.each(item.children,(k,ch)=>{$child.append(renderCollTreeItem(ch,collectionId,item.id));});}
+        $d.append($child);
+        
+        // Add reorder dragover/drop to the container
+        addReorderHandlers($d);
+        return $d;
     } else {
-        const $d=$('<div>',{class:'flex items-center gap-1.5 py-0.5 px-1 text-xs cursor-pointer rounded hover:bg-surface-50 dark:hover:bg-surface-700 group'}).on('click',function(){loadCollReq(collectionId,item.id);}).on('contextmenu',function(e){
+        const method = item.request_data?item.request_data.method:'GET';
+        const $d=$('<div>',{class:'reorder-container', 'data-item-id':item.id, 'data-parent-id':parentId||'', 'data-collection-id':collectionId});
+        const $inner=$('<div>',{class:'tree-request'+(selectedItems.has(item.id)?' sel-highlight':'')}).on('click',function(){
+            if(selectionMode) { toggleSelectItem(item.id); return; }
+            loadCollReq(collectionId,item.id);
+        }).on('contextmenu',function(e){
             e.preventDefault();
+            if(selectionMode) return;
             showCtxMenu(e.clientX,e.clientY,[
-                {label:'&#9998; Rename',action:()=>renameItem(item.id,$(this).find('.truncate'))},
+                {label:'&#9998; Rename',action:()=>renameItem(item.id,$(this).find('.req-name'))},
                 {label:'&#8505; Edit Info',action:()=>editItemInfo(collectionId,item.id)},
                 {divider:true},
                 {label:'&#10005; Delete',danger:true,action:()=>deleteCollItem(collectionId,item.id)}
             ]);
         });
-        $d.append($('<span>',{class:'pill '+mColor(item.request_data?item.request_data.method:'GET'),text:item.request_data?item.request_data.method:'GET'}));
-        $d.append($('<span>',{class:'flex-1 truncate text-surface-700 dark:text-surface-300'}).text(item.name));
-        const $actions=$('<span>',{class:'ml-auto flex gap-0.5 opacity-0 group-hover:opacity-100 transition text-surface-400'});
-        $actions.append($('<button>',{class:'hover:text-brand-500 text-[10px] px-0.5',title:'Rename'}).html('&#9998;').on('click',function(e){e.stopPropagation();renameItem(item.id,$(this).closest('.group').find('.truncate'));}));
-        $actions.append($('<button>',{class:'hover:text-red-500 text-[10px] px-0.5',html:'&times;'}).on('click',function(e){e.stopPropagation();deleteCollItem(collectionId,item.id);}));
-        $d.append($actions); return $d;
+        
+        // Selection checkbox
+        let $dragHandleReq;
+        if(selectionMode) {
+            const $cb = $('<span>',{class:'sel-checkbox'+(selectedItems.has(item.id)?' checked':'')}).on('click',function(e){e.stopPropagation();toggleSelectItem(item.id);});
+            $inner.append($cb);
+        }
+        $dragHandleReq=$('<span>',{class:'drag-handle shrink-0 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing text-surface-400 hover:text-blue-400 transition',draggable:true,title:'Drag to move'}).html('<svg class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16"><path d="M7 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM7 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 2a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 8a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0zM12 14a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/></svg>').on('dragstart',function(e){dragStart(e,item.id,collectionId,'request');e.stopPropagation();}).on('dragend',dragEnd);
+        $inner.append($dragHandleReq);
+        
+        $inner.append($('<span>',{class:'req-method-pill '+mColor(method)}).text(method));
+        $inner.append($('<span>',{class:'req-name'}).text(item.name));
+        
+        const $toolbar=$('<span>',{class:'coll-hover-toolbar ml-auto'});
+        $toolbar.append($('<button>',{class:'coll-hover-btn',title:'Edit Info'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>').on('click',function(e){e.stopPropagation();editItemInfo(collectionId,item.id);}));
+        $toolbar.append($('<button>',{class:'coll-hover-btn danger',title:'Delete'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>').on('click',function(e){e.stopPropagation();deleteCollItem(collectionId,item.id);}));
+        $inner.append($toolbar);
+        $d.append($inner);
+        
+        // Add reorder dragover/drop to the container
+        addReorderHandlers($d);
+        return $d;
+    }
+}
+
+// Helper: add dragover/dragleave/drop handlers for same-level reordering
+function addReorderHandlers($container) {
+    $container.on('dragover', function(e) {
+        e.preventDefault();
+        if (!dragData) return;
+        const $this = $(this);
+        const offset = $this.offset();
+        const height = $this.outerHeight();
+        const relY = e.clientY - offset.top;
+        const insertBefore = relY < height / 2;
+        
+        // Remove indicators from all containers
+        $('.reorder-container').removeClass('reorder-drop-top reorder-drop-bottom');
+        
+        if (insertBefore) {
+            $this.addClass('reorder-drop-top');
+        } else {
+            $this.addClass('reorder-drop-bottom');
+        }
+    });
+    
+    $container.on('dragleave', function(e) {
+        // Only remove if we're actually leaving the container, not entering a child
+        if (!$(e.relatedTarget).closest('.reorder-container').is($container)) {
+            $(this).removeClass('reorder-drop-top reorder-drop-bottom');
+        }
+    });
+    
+    $container.on('drop', function(e) {
+        e.preventDefault();
+        $(this).removeClass('reorder-drop-top reorder-drop-bottom');
+        if (!dragData) return;
+        
+        const targetId = $(this).data('item-id');
+        const pId = $(this).data('parent-id') || null;
+        const collId = $(this).data('collection-id');
+        
+        // Determine before/after from which class was applied
+        const offset = $(this).offset();
+        const height = $(this).outerHeight();
+        const relY = e.clientY - offset.top;
+        const insertBefore = relY < height / 2;
+        
+        dropBetween(dragData.itemId, targetId, collId, pId, insertBefore);
+    });
+}
+
+async function dropBetween(draggedId, targetId, collectionId, parentId, insertBefore) {
+    if (!dragData) return;
+    
+    // Prevent dropping on self
+    if (draggedId === targetId) {
+        toast('Cannot drop an item on itself');
+        return;
+    }
+    
+    // Prevent circular folder references
+    if (dragData.type === 'folder') {
+        const isCircular = isDescendant(draggedId, targetId, 
+            colls.find(c => c.id === collectionId)?.items || []);
+        if (isCircular) {
+            toast('Cannot move a folder into its own subfolder');
+            return;
+        }
+    }
+    
+    try {
+        // Get all siblings at this level
+        const coll = colls.find(c => c.id === collectionId);
+        if (!coll) { toast('Collection not found'); return; }
+        
+        let siblings = [];
+        function findSiblings(items) {
+            if (!items) return;
+            for (const it of items) {
+                if (it.type === 'folder' && it.id === parentId) {
+                    siblings = it.children || [];
+                    return;
+                }
+                if (it.children) findSiblings(it.children);
+            }
+        }
+        
+        if (parentId) {
+            findSiblings(coll.items);
+        } else {
+            siblings = coll.items || [];
+        }
+        
+        // Build order: copy siblings, remove dragged item, insert at position
+        let ordered = siblings.filter(s => s.id !== draggedId);
+        const targetIdx = ordered.findIndex(s => s.id === targetId);
+        
+        if (targetIdx === -1) {
+            // Target not found in siblings - might be moving to a different level
+            ordered.push({ id: draggedId, order: ordered.length });
+        } else {
+            const insertAt = insertBefore ? targetIdx : targetIdx + 1;
+            ordered.splice(insertAt, 0, { id: draggedId, order: 0 });
+        }
+        
+        // Assign sequential order values
+        const itemsToSend = ordered.map((s, idx) => ({
+            id: s.id,
+            parent_id: parentId,
+            order: idx
+        }));
+        
+        await api('/collections/' + collectionId + '/reorder', {
+            method: 'POST',
+            body: JSON.stringify({ items: itemsToSend })
+        });
+        await renderCollections();
+        toast(insertBefore ? 'Moved before' : 'Moved after');
+    } catch {
+        toast('Failed to reorder');
     }
 }
 async function createCollection(){
@@ -436,6 +810,10 @@ async function deleteColl(id){
 async function addFolderToColl(collectionId){
     Swal.fire({title:'New Folder',input:'text',inputPlaceholder:'Folder name',showCancelButton:true,confirmButtonText:'Create',preConfirm:n=>{if(!n.trim())Swal.showValidationMessage('Name required');}})
         .then(async r=>{if(r.isConfirmed){await api('/collections/'+collectionId+'/items',{method:'POST',body:JSON.stringify({type:'folder',name:r.value.trim()})});await renderCollections();toast('Folder created');}});
+}
+async function addSubfolderToColl(collectionId, parentId){
+    Swal.fire({title:'New Subfolder',input:'text',inputPlaceholder:'Subfolder name',showCancelButton:true,confirmButtonText:'Create',preConfirm:n=>{if(!n.trim())Swal.showValidationMessage('Name required');}})
+        .then(async r=>{if(r.isConfirmed){await api('/collections/'+collectionId+'/items',{method:'POST',body:JSON.stringify({type:'folder',name:r.value.trim(),parent_id:parentId})});await renderCollections();toast('Subfolder created');}});
 }
 async function addReqToColl(collectionId){
     saveTabData(); const d=curTab()?.data; if(!d||!d.url){toast('Open a request first');return;}
@@ -632,6 +1010,191 @@ function importCollection(){
 async function importItem(collId,parentId,item){
     const created=await api('/collections/'+collId+'/items',{method:'POST',body:JSON.stringify({type:item.type,name:item.name,parent_id:parentId,request_data:item.request_data||null,response_data:item.response_data||null})});
     if(item.type==='folder'&&item.children){for(const ch of item.children)await importItem(collId,created.id,ch);}
+}
+
+// ========= BULK OPERATIONS =========
+function toggleSelectionMode(){
+    selectionMode = !selectionMode;
+    if(!selectionMode) {
+        selectedItems.clear();
+    }
+    renderCollections();
+}
+
+function toggleSelectItem(id) {
+    if(selectedItems.has(id)) {
+        selectedItems.delete(id);
+    } else {
+        selectedItems.add(id);
+    }
+    updateBulkBar();
+    // Update highlight on the toggled element
+    $('[data-item-id="'+id+'"]').find('.folder-header, .tree-request').toggleClass('sel-highlight', selectedItems.has(id));
+    $('[data-item-id="'+id+'"]').find('.sel-checkbox').toggleClass('checked', selectedItems.has(id));
+}
+
+function updateBulkBar() {
+    const count = selectedItems.size;
+    const $bar = $('#bulk-action-bar');
+    const $count = $('#bulk-count');
+    if(!$bar.length || !$count.length) return;
+    $bar.toggleClass('show', count > 0 || selectionMode);
+    $count.text(count + ' selected');
+    // Always show deselect; only show delete/move when there are selections
+    $('#bulk-delete-btn, #bulk-move-btn').toggle(count > 0);
+    $('#bulk-deselect-btn').toggle(count > 0 || selectionMode);
+}
+
+async function bulkDeleteSelected() {
+    const count = selectedItems.size;
+    if(count === 0) { toast('No items selected'); return; }
+    
+    const result = await Swal.fire({
+        title: 'Delete '+count+' item'+(count>1?'s':'')+'?',
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        confirmButtonText: 'Delete '+(count>1?'All':''),
+        cancelButtonText: 'Cancel'
+    });
+    if(!result.isConfirmed) return;
+    
+    const ids = Array.from(selectedItems);
+    let success = 0;
+    for(const id of ids) {
+        try {
+            await api('/collections/items/'+id, { method: 'DELETE' });
+            success++;
+        } catch(e) {
+            console.error('Failed to delete item', id, e);
+        }
+    }
+    
+    selectedItems.clear();
+    selectionMode = false;
+    await renderCollections();
+    toast('Deleted '+success+' item'+(success>1?'s':'')+(success < count ? ' ('+(count-success)+' failed)' : ''));
+}
+
+async function bulkMoveSelected() {
+    const count = selectedItems.size;
+    if(count === 0) { toast('No items selected'); return; }
+    
+    // Determine which collections the selected items belong to
+    const affectedColls = new Set();
+    function findItemCollection(itemId, items) {
+        for(const it of items) {
+            if(it.id === itemId) return true;
+            if(it.children) {
+                const found = findItemCollection(itemId, it.children);
+                if(found) return true;
+            }
+        }
+        return false;
+    }
+    for(const c of colls) {
+        if(selectedItems.has(c.id)) { affectedColls.add(c.id); continue; }
+        if(c.items && findItemCollection(selectedItems, c.items)) {
+            affectedColls.add(c.id);
+        }
+    }
+    
+    // Build folder picker HTML
+    let html = '<div style="margin-bottom:8px">';
+    html += '<p style="font-size:11px;color:#64748b;margin-bottom:10px">Moving <strong>'+count+'</strong> item'+(count>1?'s':'')+' from <strong>'+affectedColls.size+'</strong> collection'+(affectedColls.size>1?'s':'')+'. Items stay in their original collection &mdash; only their folder location changes.</p>';
+    html += '<label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px;color:#475569">Target Folder</label>';
+    html += '<select id="bulk-move-folder" style="width:100%;padding:6px 10px;border:1px solid #e2e8f0;border-radius:6px;font-size:13px;box-sizing:border-box">';
+    html += '<option value="">Root (no folder)</option>';
+    // Build tree for all collections
+    $.each(colls, (i,c) => {
+        if(c.items && c.items.length) {
+            html += '<option value="" disabled style="font-weight:600;color:#94a3b8;font-size:11px">&mdash; '+esc(c.name)+' &mdash;</option>';
+            (function walk(items, depth) {
+                $.each(items, (i, it) => {
+                    if(it.type === 'folder') {
+                        const label = (depth > 0 ? Array(depth+1).join('  ') : '') + it.name;
+                        html += '<option value="'+it.id+'" data-coll="'+c.id+'">'+esc(label)+'</option>';
+                        if(it.children) walk(it.children, depth+1);
+                    }
+                });
+            })(c.items, 0);
+        }
+    });
+    html += '</select></div>';
+    
+    const result = await Swal.fire({
+        title: 'Move '+count+' item'+(count>1?'s':'')+' to...',
+        html,
+        width: '450px',
+        showCancelButton: true,
+        confirmButtonText: 'Move',
+        confirmButtonColor: '#4f46e5',
+        preConfirm: () => {
+            const $sel = $('#bulk-move-folder');
+            const folderId = $sel.val() || null;
+            const collId = folderId ? $sel.find('option:selected').data('coll') : null;
+            return { collId, folderId };
+        }
+    });
+    
+    if(!result.isConfirmed) return;
+    
+    const { collId: targetCollId, folderId } = result.value;
+    const ids = Array.from(selectedItems);
+    let success = 0, fail = 0;
+    
+    // Group items by their source collection for multi-collection moves
+    const itemsByColl = {};
+    for(const c of colls) {
+        for(const id of ids) {
+            // Check if item belongs to this collection
+            let belongs = id === c.id || false;
+            if(!belongs && c.items) {
+                (function check(items) {
+                    for(const it of items) {
+                        if(it.id === id) { belongs = true; return; }
+                        if(it.children && it.children.length) check(it.children);
+                    }
+                })(c.items);
+            }
+            if(belongs) {
+                if(!itemsByColl[c.id]) itemsByColl[c.id] = [];
+                itemsByColl[c.id].push(id);
+            }
+        }
+    }
+    
+    // If target is root level and no specific collection selected, use each item's own collection
+    const moveCollIds = targetCollId ? [targetCollId] : Object.keys(itemsByColl);
+    
+    for(const cId of moveCollIds) {
+        const itemIds = itemsByColl[cId] || [];
+        if(!itemIds.length) continue;
+        try {
+            const itemsToSend = itemIds.map((id, idx) => ({
+                id: id,
+                parent_id: folderId,
+                order: idx
+            }));
+            await api('/collections/'+cId+'/reorder', {
+                method: 'POST',
+                body: JSON.stringify({ items: itemsToSend })
+            });
+            success += itemIds.length;
+        } catch(e) {
+            fail += itemIds.length;
+        }
+    }
+    
+    selectedItems.clear();
+    selectionMode = false;
+    await renderCollections();
+    if(fail > 0) {
+        toast('Moved '+success+' item'+(success>1?'s':'')+', '+fail+' failed');
+    } else {
+        toast('Moved '+success+' item'+(success>1?'s':'')+(folderId?' to folder':' to collection root'));
+    }
 }
 
 // ========= USER MENU =========

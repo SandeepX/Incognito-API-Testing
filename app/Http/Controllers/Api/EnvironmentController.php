@@ -39,7 +39,6 @@ class EnvironmentController extends Controller
 
     public function update(UpdateEnvironmentRequest $request, Environment $environment)
     {
-        // Ensure user has access
         if ($environment->workspace_id && !Auth::user()->workspaces()->where('workspaces.id', $environment->workspace_id)->exists()) {
             abort(403);
         }
@@ -51,7 +50,6 @@ class EnvironmentController extends Controller
 
     public function destroy(Environment $environment)
     {
-        // Ensure user has access
         if ($environment->workspace_id && !Auth::user()->workspaces()->where('workspaces.id', $environment->workspace_id)->exists()) {
             abort(403);
         }

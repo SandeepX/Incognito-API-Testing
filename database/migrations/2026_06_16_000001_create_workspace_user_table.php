@@ -17,7 +17,6 @@ return new class extends Migration
             $table->primary(['user_id', 'workspace_id']);
         });
 
-        // Add owner_id to workspaces
         Schema::table('workspaces', function (Blueprint $table) {
             $table->foreignId('owner_id')->nullable()->after('description')->constrained('users')->nullOnDelete();
         });

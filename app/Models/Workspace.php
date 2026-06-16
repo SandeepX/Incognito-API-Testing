@@ -10,10 +10,16 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Workspace extends Model
 {
-    protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['id', 'name', 'description', 'owner_id'];
+    protected $keyType = 'string';
+
+    protected $fillable = [
+        'id',
+        'name',
+        'description',
+        'owner_id'
+    ];
 
     protected $casts = [
         'created_at' => 'datetime',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProxyRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -12,20 +13,9 @@ class ApiTesterController extends Controller
         return view('apitester.index');
     }
 
-    public function proxy(Request $request)
+    public function proxy(ProxyRequest $request)
     {
-        $validated = $request->validate([
-            'method' => 'required|in:GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS',
-            'url' => 'required|url|max:2048',
-            'headers' => 'nullable|array',
-            'headers.*.key' => 'nullable|string|max:255',
-            'headers.*.value' => 'nullable|string|max:2048',
-            'body' => 'nullable|string',
-            'bodyType' => 'nullable|in:none,json,form-data',
-            'formData' => 'nullable|array',
-            'formData.*.key' => 'nullable|string|max:255',
-            'formData.*.value' => 'nullable|string|max:2048',
-        ]);
+        $validated = $request->validated();
 
         $method = strtoupper($validated['method']);
         $url = $validated['url'];

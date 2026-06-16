@@ -57,7 +57,6 @@
             @endif
         </div>
 
-        <!-- Description -->
         @if(!empty($req['description']))
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Description</div>
@@ -65,13 +64,11 @@
             </div>
         @endif
 
-        <!-- URL -->
         <div class="docs-detail-section">
             <div class="docs-detail-label">Request URL</div>
             <div class="docs-code-block">{{ $method }} {{ $url }}</div>
         </div>
 
-        <!-- Auth -->
         @if($auth['type'] !== 'none')
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Authorization</div>
@@ -94,7 +91,6 @@
             </div>
         @endif
 
-        <!-- Query Params -->
         @if(!empty($params))
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Query Parameters</div>
@@ -113,7 +109,6 @@
             </div>
         @endif
 
-        <!-- Headers -->
         @if(!empty($headers))
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Headers</div>
@@ -132,7 +127,6 @@
             </div>
         @endif
 
-        <!-- Body -->
         @if($bodyType !== 'none')
             <div class="docs-detail-section">
                 <div class="docs-detail-label" style="display:flex;align-items:center;gap:8px;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b">
@@ -166,7 +160,6 @@
             </div>
         @endif
 
-        <!-- Cookies -->
         @if(!empty($cookies))
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Cookies</div>
@@ -183,7 +176,6 @@
             </div>
         @endif
 
-        <!-- Examples -->
         @if(!empty($req['examples']))
             <div class="docs-detail-section">
                 <div class="docs-detail-label">Examples ({{ count($req['examples']) }})</div>

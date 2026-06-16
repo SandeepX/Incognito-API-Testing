@@ -19,6 +19,11 @@ class UpdateCollectionItemRequest extends FormRequest
             'method' => ['sometimes', 'in:GET,POST,PUT,PATCH,DELETE,HEAD,OPTIONS'],
             'url' => ['sometimes', 'string'],
             'request_data' => ['sometimes', 'array'],
+            'description' => ['sometimes', 'string', 'max:5000'],
+            'examples' => ['sometimes', 'array'],
+            'examples.*.name' => ['required', 'string', 'max:255'],
+            'examples.*.body' => ['nullable', 'string'],
+            'examples.*.status' => ['nullable', 'integer'],
         ];
     }
 }

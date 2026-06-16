@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Environment;
+use App\Models\User;
 use App\Models\Workspace;
 use App\Models\Collection;
 use App\Models\CollectionItem;
@@ -14,15 +15,33 @@ class ApiRefactoringTest extends TestCase
 {
     use DatabaseMigrations;
 
+    private function createUserWithWorkspace(): array
+    {
+        $user = User::factory()->create();
+
+        $workspace = Workspace::create([
+            'id' => (string) Str::uuid(),
+            'name' => 'Test Workspace',
+            'description' => 'Test workspace',
+            'owner_id' => $user->id,
+        ]);
+
+        $workspace->users()->attach($user->id, ['role' => 'owner']);
+
+        return [$user, $workspace];
+    }
+
     public function test_environment_resource_serialization(): void
     {
+        [$user] = $this->createUserWithWorkspace();
+
         $env = Environment::create([
             'id' => (string) Str::uuid(),
             'name' => 'Test Env',
             'variables' => [['key' => 'url', 'value' => 'https://test.com']],
         ]);
 
-        $response = $this->getJson('/api/environments');
+        $response = $this->actingAs($user)->getJson('/api/environments');
         $response->assertOk();
         $response->assertJsonCount(1);
         $response->assertJsonStructure([
@@ -32,9 +51,12 @@ class ApiRefactoringTest extends TestCase
 
     public function test_store_environment_with_form_request(): void
     {
-        $response = $this->postJson('/api/environments', [
+        [$user, $workspace] = $this->createUserWithWorkspace();
+
+        $response = $this->actingAs($user)->postJson('/api/environments', [
             'name' => 'Production',
             'variables' => [['key' => 'api_key', 'value' => 'secret']],
+            'workspace_id' => $workspace->id,
         ]);
 
         $response->assertCreated();
@@ -44,13 +66,16 @@ class ApiRefactoringTest extends TestCase
 
     public function test_update_environment_with_form_request(): void
     {
+        [$user, $workspace] = $this->createUserWithWorkspace();
+
         $env = Environment::create([
             'id' => (string) Str::uuid(),
             'name' => 'Test Env',
             'variables' => [],
+            'workspace_id' => $workspace->id,
         ]);
 
-        $response = $this->putJson("/api/environments/{$env->id}", [
+        $response = $this->actingAs($user)->putJson("/api/environments/{$env->id}", [
             'name' => 'Updated Env',
         ]);
 
@@ -61,12 +86,9 @@ class ApiRefactoringTest extends TestCase
 
     public function test_workspace_resource_with_relations(): void
     {
-        $workspace = Workspace::create([
-            'id' => (string) Str::uuid(),
-            'name' => 'My Workspace',
-        ]);
+        [$user, $workspace] = $this->createUserWithWorkspace();
 
-        $response = $this->getJson('/api/workspaces');
+        $response = $this->actingAs($user)->getJson('/api/workspaces');
         $response->assertOk();
         $response->assertJsonStructure([
             '*' => ['id', 'name', 'description', 'collections']
@@ -75,10 +97,7 @@ class ApiRefactoringTest extends TestCase
 
     public function test_collection_resource_serialization(): void
     {
-        $workspace = Workspace::create([
-            'id' => (string) Str::uuid(),
-            'name' => 'My Workspace',
-        ]);
+        [$user, $workspace] = $this->createUserWithWorkspace();
 
         $collection = Collection::create([
             'id' => (string) Str::uuid(),
@@ -86,7 +105,7 @@ class ApiRefactoringTest extends TestCase
             'name' => 'My Collection',
         ]);
 
-        $response = $this->getJson('/api/collections');
+        $response = $this->actingAs($user)->getJson('/api/collections');
         $response->assertOk();
         $response->assertJsonStructure([
             '*' => ['id', 'name', 'workspace_id', 'items']
@@ -95,8 +114,11 @@ class ApiRefactoringTest extends TestCase
 
     public function test_collection_item_resource_with_children(): void
     {
+        [$user, $workspace] = $this->createUserWithWorkspace();
+
         $collection = Collection::create([
             'id' => (string) Str::uuid(),
+            'workspace_id' => $workspace->id,
             'name' => 'My Collection',
         ]);
 
@@ -108,7 +130,7 @@ class ApiRefactoringTest extends TestCase
             'order' => 1,
         ]);
 
-        $response = $this->getJson("/api/collections/{$collection->id}/items");
+        $response = $this->actingAs($user)->getJson("/api/collections/{$collection->id}/items");
         $response->assertOk();
         $response->assertJsonStructure([
             '*' => ['id', 'name', 'type', 'children']
@@ -117,12 +139,15 @@ class ApiRefactoringTest extends TestCase
 
     public function test_store_collection_item_with_form_request(): void
     {
+        [$user, $workspace] = $this->createUserWithWorkspace();
+
         $collection = Collection::create([
             'id' => (string) Str::uuid(),
+            'workspace_id' => $workspace->id,
             'name' => 'My Collection',
         ]);
 
-        $response = $this->postJson("/api/collections/{$collection->id}/items", [
+        $response = $this->actingAs($user)->postJson("/api/collections/{$collection->id}/items", [
             'collection_id' => $collection->id,
             'type' => 'request',
             'name' => 'Get Users',
@@ -136,10 +161,7 @@ class ApiRefactoringTest extends TestCase
 
     public function test_model_relationships(): void
     {
-        $workspace = Workspace::create([
-            'id' => (string) Str::uuid(),
-            'name' => 'Test Workspace',
-        ]);
+        [$user, $workspace] = $this->createUserWithWorkspace();
 
         $collection = Collection::create([
             'id' => (string) Str::uuid(),

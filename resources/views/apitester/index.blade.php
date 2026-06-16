@@ -37,6 +37,40 @@
                 </button>
             </div>
 
+            <!-- User Menu -->
+            <div class="flex items-center gap-1.5 border-l border-surface-700 pl-2 ml-2 relative">
+                <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-surface-300 hover:text-surface-100 hover:bg-surface-700 px-2 py-1.5 rounded transition" title="User menu">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold">
+                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                    </div>
+                    <span class="text-xs font-medium hidden lg:inline">{{ auth()->user()->name }}</span>
+                    <svg class="w-3 h-3 text-surface-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+                <div id="user-menu-dropdown" class="absolute top-full right-0 mt-1 w-48 bg-surface-800 dark:bg-surface-800 border border-surface-700 rounded-lg shadow-xl z-50 hidden py-1">
+                    <div class="px-3 py-2 border-b border-surface-700">
+                        <p class="text-xs font-medium text-surface-100 truncate">{{ auth()->user()->name }}</p>
+                        <p class="text-[10px] text-surface-400 truncate">{{ auth()->user()->email }}</p>
+                    </div>
+                    <a href="#" onclick="manageWorkspaceMembers()" class="flex items-center gap-2 px-3 py-2 text-xs text-surface-300 hover:bg-surface-700 hover:text-surface-100 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/></svg>
+                        Workspace Members
+                    </a>
+                    <a href="#" onclick="manageWorkspaces()" class="flex items-center gap-2 px-3 py-2 text-xs text-surface-300 hover:bg-surface-700 hover:text-surface-100 transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                        Manage Workspaces
+                    </a>
+                    <div class="border-t border-surface-700 mt-1 pt-1">
+                        <form method="POST" action="{{ route('logout') }}" id="logout-form">
+                            @csrf
+                            <button type="submit" class="flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-surface-700 hover:text-red-300 transition w-full text-left">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                Sign Out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- More Options -->
             <div class="flex items-center gap-1.5 border-l border-surface-700 pl-2 ml-2">
                 <button onclick="saveResp()" class="text-surface-400 hover:text-blue-400 p-1.5 rounded hover:bg-surface-700 transition" title="Save Response">

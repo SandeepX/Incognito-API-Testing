@@ -18,6 +18,8 @@ class ItemResource extends JsonResource
             'method' => $this->method,
             'url' => $this->url,
             'request_data' => $this->request_data,
+            'description' => $this->description,
+            'examples' => $this->examples,
             'order' => $this->order,
             'children' => ItemResource::collection($this->whenLoaded('children')),
         ];

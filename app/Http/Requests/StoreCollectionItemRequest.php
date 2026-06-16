@@ -21,6 +21,11 @@ class StoreCollectionItemRequest extends FormRequest
             'request_data.method'   => 'nullable|string',
             'request_data.url'      => 'nullable|string',
             'response_data'         => 'nullable|array',
+            'description'           => 'nullable|string|max:5000',
+            'examples'              => 'nullable|array',
+            'examples.*.name'       => 'required|string|max:255',
+            'examples.*.body'       => 'nullable|string',
+            'examples.*.status'     => 'nullable|integer',
         ];
     }
 

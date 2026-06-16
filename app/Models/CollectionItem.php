@@ -11,10 +11,11 @@ class CollectionItem extends Model
     protected $keyType = 'string';
     public $incrementing = false;
 
-    protected $fillable = ['id', 'collection_id', 'parent_id', 'type', 'name', 'method', 'url', 'request_data', 'order'];
+    protected $fillable = ['id', 'collection_id', 'parent_id', 'type', 'name', 'method', 'url', 'request_data', 'order', 'description', 'examples'];
 
     protected $casts = [
         'request_data' => 'array',
+        'examples' => 'array',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];

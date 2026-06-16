@@ -40,6 +40,26 @@ function api(path, opts){
 // ========= TOAST =========
 function toast(m){const $e=$('#toast');$e.text(m).addClass('show');clearTimeout($e[0]._t);$e[0]._t=setTimeout(()=>$e.removeClass('show'),2000);}
 
+// ========= SWEETALERT2 DARK THEME =========
+function isDark(){return $('html').hasClass('dark');}
+function swal(opts){
+    const dark=isDark();
+    const defaults={
+        background: dark?'#1e293b':'#fff',
+        color: dark?'#e2e8f0':'#334155',
+        confirmButtonColor: '#3b82f6',
+        cancelButtonColor: dark?'rgba(255,255,255,0.06)':'#e2e8f0',
+        reverseButtons: true,
+        customClass: {
+            confirmButton: dark?'swal2-confirm':''
+        }
+    };
+    if(opts.icon&&dark){
+        defaults.iconColor = opts.icon==='warning'?'#fbbf24':opts.icon==='error'?'#f87171':opts.icon==='success'?'#6ee7b7':opts.icon==='info'?'#60a5fa':'#a78bfa';
+    }
+    return Swal.fire({...defaults,...opts});
+}
+
 // ========= THEME =========
 function toggleTheme(){
     $('html').toggleClass('dark');
@@ -229,7 +249,7 @@ function updateFieldVarBadges(){
 
 // ========= API HELPERS =========
 async function fetchEnvs(){try{envs=await api('/environments');}catch{}}
-async function fetchColls(){try{colls=await api('/collections');}catch{}}
+async function fetchColls(){try{const wid=localStorage.getItem('incognito-active-workspace');const qs=wid?'?workspace_id='+wid:'';colls=await api('/collections'+qs);}catch{}}
 async function fetchWorks(){try{works=await api('/workspaces');}catch{}}
 
 // ========= ENVIRONMENTS =========
@@ -251,26 +271,27 @@ async function renderEnvironments(){
     });
 }
 function manageEnvironments(){
-    let html='<div style="max-height:60vh;overflow-y:auto"><div class="flex gap-2 mb-2"><button class="add-env-btn" style="padding:6px 12px;background:#4f46e5;color:white;border-radius:6px;font-size:12px;border:none;cursor:pointer">+ New Environment</button></div><div id="env-manager-list">';
+    let html='<div style="max-height:60vh;overflow-y:auto"><div style="display:flex;gap:8px;margin-bottom:8px"><button class="add-env-btn modal-btn-primary">+ New Environment</button></div><div id="env-manager-list">';
     $.each(envs,(i,e)=>{
-        html+=`<div class="env-card" data-id="${e.id}" style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;background:#f8fafc">
+        html+=`<div class="env-card modal-card" data-id="${e.id}">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                <input class="env-name" value="${esc(e.name)}" style="flex:1;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;font-weight:600">
-                <button class="del-env-btn" style="color:#ef4444;font-size:16px;border:none;background:none;cursor:pointer">&times;</button>
+                <input class="env-name modal-input" value="${esc(e.name)}" style="font-weight:600">
+                <button class="del-env-btn modal-btn-danger">&times;</button>
             </div>
             <div class="env-vars-list">${(e.variables||[]).map(v=>`<div class="ev-row" style="display:flex;gap:4px;margin-bottom:3px;align-items:center">
-                <input class="ev-key" value="${esc(v.key)}" placeholder="Key" style="flex:1;padding:3px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">
-                <input class="ev-val" value="${esc(v.value)}" placeholder="Value" style="flex:1;padding:3px 6px;border:1px solid #e2e8f0;border-radius:4px;font-size:11px">
-                <button class="del-ev-btn" style="color:#ef4444;font-size:14px;border:none;background:none;cursor:pointer">&times;</button>
+                <input class="ev-key modal-input" value="${esc(v.key)}" placeholder="Key" style="padding:3px 6px">
+                <input class="ev-val modal-input" value="${esc(v.value)}" placeholder="Value" style="padding:3px 6px">
+                <button class="del-ev-btn modal-btn-danger" style="font-size:14px">&times;</button>
             </div>`).join('')}</div>
-            <button class="add-ev-btn" style="font-size:11px;color:#4f46e5;border:none;background:none;cursor:pointer">+ Add variable</button>
+            <button class="add-ev-btn modal-add-btn">+ Add variable</button>
         </div>`;
     });
     html+='</div></div>';
-    Swal.fire({title:'Manage Environments',html,width:'600px',showCancelButton:true,confirmButtonText:'Save Changes',
+    swal({title:'Manage Environments',html,width:'600px',showCancelButton:true,confirmButtonText:'Save Changes',confirmButtonColor:'#4f46e5',
         didOpen:()=>{
             $('.add-env-btn').on('click',function(){
-                const $card=$('<div>',{class:'env-card','data-id':'new',css:{border:'1px solid #e2e8f0',borderRadius:'8px',padding:'10px',marginBottom:'8px',background:'#f8fafc'}}).html(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input class="env-name" placeholder="Environment Name" style="flex:1;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;font-weight:600"><button class="del-env-btn" style="color:#ef4444;font-size:16px;border:none;background:none;cursor:pointer">&times;</button></div><div class="env-vars-list"></div><button class="add-ev-btn" style="font-size:11px;color:#4f46e5;border:none;background:none;cursor:pointer">+ Add variable</button>`);
+                const $card=$('<div>',{class:'env-card modal-card','data-id':'new'});
+                $card.html(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input class="env-name modal-input" placeholder="Environment Name" style="font-weight:600"><button class="del-env-btn modal-btn-danger">&times;</button></div><div class="env-vars-list"></div><button class="add-ev-btn modal-add-btn">+ Add variable</button>`);
                 $('#env-manager-list').append($card);
                 $card.find('.del-env-btn').on('click',function(){$(this).closest('.env-card').remove();});
                 $card.find('.add-ev-btn').on('click',function(){addEnvVarRow($(this).closest('.env-card').find('.env-vars-list'));});
@@ -292,9 +313,9 @@ function manageEnvironments(){
 }
 function addEnvVarRow($list){
     $list.append($('<div>',{class:'ev-row',css:{display:'flex',gap:'4px',marginBottom:'3px',alignItems:'center'}}).append(
-        $('<input>',{class:'ev-key',placeholder:'Key',css:{flex:1,padding:'3px 6px',border:'1px solid #e2e8f0',borderRadius:'4px',fontSize:'11px'}}),
-        $('<input>',{class:'ev-val',placeholder:'Value',css:{flex:1,padding:'3px 6px',border:'1px solid #e2e8f0',borderRadius:'4px',fontSize:'11px'}}),
-        $('<button>',{class:'del-ev-btn',html:'&times;',css:{color:'#ef4444',fontSize:'14px',border:'none',background:'none',cursor:'pointer'}}).on('click',function(){$(this).closest('.ev-row').remove();})
+        $('<input>',{class:'ev-key modal-input',placeholder:'Key',css:{flex:1,padding:'3px 6px',fontSize:'11px'}}),
+        $('<input>',{class:'ev-val modal-input',placeholder:'Value',css:{flex:1,padding:'3px 6px',fontSize:'11px'}}),
+        $('<button>',{class:'del-ev-btn modal-btn-danger',html:'&times;',css:{fontSize:'14px'}}).on('click',function(){$(this).closest('.ev-row').remove();})
     ));
 }
 async function deleteEnv(id){
@@ -321,6 +342,8 @@ function renderCollItem(c){
             {label:'&#128193; Add Folder',action:()=>addFolderToColl(c.id)},
             {label:'&#43; Add Request',action:()=>addReqToColl(c.id)},
             {divider:true},
+            {label:'&#128196; View Docs',action:()=>viewDocs(c.id)},
+            {label:'&#128279; Copy Docs Link',action:()=>copyDocsLink(c.id)},
             {label:'&#128229; Export',action:()=>exportColl(c.id)},
             {label:'&#10005; Delete',danger:true,action:()=>deleteColl(c.id)}
         ]);
@@ -329,6 +352,7 @@ function renderCollItem(c){
     const $actions=$('<span>',{class:'ml-auto flex gap-0.5 opacity-0 group-hover:opacity-100 transition text-surface-400'});
     $actions.append($('<button>',{class:'hover:text-brand-500 px-0.5',title:'Add Folder'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-5 4h10a2 2 0 002-2V9a2 2 0 00-2-2h-2.586A2 2 0 0012 4.414L10.586 3H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>').on('click',function(e){e.stopPropagation();addFolderToColl(c.id);}));
     $actions.append($('<button>',{class:'hover:text-brand-500 px-0.5',title:'Add Request'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>').on('click',function(e){e.stopPropagation();addReqToColl(c.id);}));
+    $actions.append($('<button>',{class:'hover:text-indigo-400 px-0.5',title:'Documentation'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>').on('click',function(e){e.stopPropagation();viewDocs(c.id);}));
     $actions.append($('<button>',{class:'hover:text-blue-500 px-0.5',title:'Export'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 11l5 5 5-5M12 4v11"/></svg>').on('click',function(e){e.stopPropagation();exportColl(c.id);}));
     $actions.append($('<button>',{class:'hover:text-red-500 px-0.5',title:'Delete'}).html('<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>').on('click',function(e){e.stopPropagation();deleteColl(c.id);}));
     $d.append($actions);
@@ -369,6 +393,7 @@ function renderCollTreeItem(item,collectionId){
             e.preventDefault();
             showCtxMenu(e.clientX,e.clientY,[
                 {label:'&#9998; Rename',action:()=>renameItem(item.id,$(this).find('.truncate'))},
+                {label:'&#8505; Edit Info',action:()=>editItemInfo(collectionId,item.id)},
                 {divider:true},
                 {label:'&#10005; Delete',danger:true,action:()=>deleteCollItem(collectionId,item.id)}
             ]);
@@ -436,6 +461,150 @@ async function loadCollReq(collectionId,itemId){
     if(t&&item.response_data)t.response=JSON.parse(JSON.stringify(item.response_data));
     activateTab(id); if(t&&t.response)loadResp(); toast('Loaded: '+item.name);
 }
+function viewDocs(id){
+    window.open('/collections/'+id+'/docs', '_blank');
+}
+function copyDocsLink(id){
+    const url = window.location.origin+'/collections/'+id+'/docs';
+    navigator.clipboard.writeText(url).then(()=>{
+        toast('Documentation link copied!');
+    }).catch(()=>{
+        // Fallback for older browsers
+        const input = document.createElement('input');
+        input.value = url;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        toast('Documentation link copied!');
+    });
+}
+
+function editItemInfo(collectionId, itemId){
+    api('/collections/'+collectionId+'/items').then(items => {
+        function findItem(arr){
+            for(const it of arr){
+                if(it.id===itemId) return it;
+                if(it.children){ const f=findItem(it.children); if(f) return f; }
+            }
+            return null;
+        }
+        const item = findItem(items);
+        if(!item){ toast('Item not found'); return; }
+
+        const desc = item.description || '';
+        const examples = item.examples || [];
+        const curResp = curTab()?.response;
+
+        let html = '<div style="max-height:65vh;overflow-y:auto">';
+        html += '<div style="margin-bottom:12px">';
+        html += '<label style="font-size:11px;font-weight:600;display:block;margin-bottom:4px;color:#94a3b8">Description</label>';
+        html += '<textarea id="edit-desc" placeholder="Describe what this endpoint does..." style="width:100%;min-height:80px;padding:8px 10px;border:1px solid #334155;border-radius:6px;font-size:12px;line-height:1.6;background:#0f172a;color:#e2e8f0;resize:vertical;box-sizing:border-box;font-family:inherit">'+esc(desc)+'</textarea>';
+        html += '</div>';
+
+        // Examples section
+        html += '<div style="margin-bottom:8px">';
+        html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+        html += '<label style="font-size:11px;font-weight:600;color:#94a3b8">Response Examples</label>';
+        html += '<div style="display:flex;gap:4px">';
+        if(curResp){
+            html += '<button id="capture-resp-btn" style="padding:4px 10px;border-radius:4px;font-size:10px;font-weight:500;border:1px solid #334155;background:#1e293b;color:#60a5fa;cursor:pointer">+ Capture Current Response</button>';
+        }
+        html += '<button id="add-example-btn" style="padding:4px 10px;border-radius:4px;font-size:10px;font-weight:500;border:1px solid #334155;background:#1e293b;color:#34d399;cursor:pointer">+ Add Empty</button>';
+        html += '</div></div>';
+        html += '<div id="examples-list">';
+        if(examples.length){
+            examples.forEach((ex, idx) => {
+                html += renderExampleRow(ex, idx);
+            });
+        }
+        html += '</div>';
+        if(!examples.length){
+            html += '<p style="font-size:11px;color:#64748b;font-style:italic">No examples yet. Add one to show request/response examples in the docs.</p>';
+        }
+        html += '</div></div>';
+
+        swal({
+            title:'Request Info: '+esc(item.name),
+            html,
+            width:'600px',
+            showCancelButton:true,
+            confirmButtonText:'Save',
+            confirmButtonColor:'#3b82f6',
+            didOpen:()=>{
+                $('#add-example-btn').on('click', function(){
+                    addExampleRow();
+                });
+                $('#capture-resp-btn').on('click', function(){
+                    const resp = curTab()?.response;
+                    if(resp && resp.body){
+                        const name = 'Response ' + ($('#examples-list .example-card').length + 1);
+                        const cardHtml = renderExampleRow({
+                            name: name,
+                            status: resp.status || 200,
+                            body: resp.body
+                        }, Date.now());
+                        $('#examples-list').append(cardHtml);
+                        $('#examples-list p:first-child').remove();
+                    } else {
+                        toast('No response to capture');
+                    }
+                });
+                $('.del-example-btn').on('click', function(){
+                    $(this).closest('.example-card').remove();
+                });
+            },
+            preConfirm: async () => {
+                const newDesc = $('#edit-desc').val().trim();
+                const newExamples = [];
+                $('.example-card').each(function(){
+                    const name = $(this).find('.ex-name').val().trim();
+                    const status = parseInt($(this).find('.ex-status').val()) || null;
+                    const body = $(this).find('.ex-body').val();
+                    if(name){
+                        newExamples.push({name, status, body: body || ''});
+                    }
+                });
+                const payload = {};
+                if(newDesc !== (item.description||'')) payload.description = newDesc;
+                const oldExamples = JSON.stringify(item.examples||[]);
+                if(JSON.stringify(newExamples) !== oldExamples) payload.examples = newExamples;
+                if(Object.keys(payload).length){
+                    await api('/collections/items/'+itemId, {
+                        method:'PUT',
+                        body:JSON.stringify(payload)
+                    });
+                    toast('Request info updated');
+                } else {
+                    toast('No changes');
+                }
+            }
+        });
+    }).catch(() => toast('Failed to load item'));
+}
+
+function renderExampleRow(ex, idx){
+    const name = esc(ex.name || '');
+    const status = ex.status || '';
+    const body = esc(ex.body || '');
+    return '<div class="example-card" style="background:#0f172a;border:1px solid #334155;border-radius:6px;padding:8px;margin-bottom:6px">'
+        + '<div style="display:flex;gap:4px;margin-bottom:4px;align-items:center">'
+        + '<input class="ex-name" value="'+name+'" placeholder="Example name" style="flex:1;padding:3px 6px;border:1px solid #334155;border-radius:4px;font-size:11px;background:#1e293b;color:#e2e8f0">'
+        + '<input class="ex-status" value="'+status+'" placeholder="Status" style="width:70px;padding:3px 6px;border:1px solid #334155;border-radius:4px;font-size:11px;background:#1e293b;color:#e2e8f0" type="number">'
+        + '<button class="del-example-btn" style="padding:2px 6px;border:none;border-radius:4px;font-size:14px;cursor:pointer;background:transparent;color:#ef4444">&times;</button>'
+        + '</div>'
+        + '<textarea class="ex-body" placeholder="Response body (JSON)" style="width:100%;min-height:60px;padding:4px 6px;border:1px solid #334155;border-radius:4px;font-size:11px;font-family:monospace;background:#1e293b;color:#e2e8f0;resize:vertical;box-sizing:border-box">'+body+'</textarea>'
+        + '</div>';
+}
+
+function addExampleRow(){
+    const cardHtml = renderExampleRow({name:'',status:'',body:''}, Date.now());
+    $('#examples-list').append(cardHtml);
+    $('#examples-list p').remove();
+    $('.del-example-btn').off('click').on('click', function(){
+        $(this).closest('.example-card').remove();
+    });
+}
 function exportColl(id){
     const c=colls.find(x=>x.id===id); if(!c)return;
     const blob=new Blob([JSON.stringify(c,null,2)],{type:'application/json'});
@@ -465,32 +634,140 @@ async function importItem(collId,parentId,item){
     if(item.type==='folder'&&item.children){for(const ch of item.children)await importItem(collId,created.id,ch);}
 }
 
+// ========= USER MENU =========
+function toggleUserMenu(){
+    const $menu=$('#user-menu-dropdown');
+    $menu.toggleClass('hidden');
+    if(!$menu.hasClass('hidden')){
+        setTimeout(()=>$(document).one('click',function(e){
+            if(!$(e.target).closest('#user-menu-dropdown').length&&!$(e.target).closest('button[onclick*="toggleUserMenu"]').length){
+                $('#user-menu-dropdown').addClass('hidden');
+            }
+        }),0);
+    }
+}
+
+// ========= WORKSPACE MEMBERS & INVITES =========
+async function manageWorkspaceMembers(){
+    $('#user-menu-dropdown').addClass('hidden');
+    const wid = localStorage.getItem('incognito-active-workspace');
+    
+    if(!wid || !works.find(w=>w.id===wid)){
+        toast('Please select a workspace first');
+        return;
+    }
+    
+    try{
+        const res = await api('/workspaces/'+wid+'/members');
+        let html = '<div style="max-height:60vh;overflow-y:auto">';
+        
+        // Members section
+        html += '<div style="margin-bottom:16px">';
+        html += '<div class="modal-section-title">Members</div>';
+        if(res.members&&res.members.length){
+            $.each(res.members,(i,m)=>{
+                html += '<div class="modal-member-row">';
+                html += '<div style="display:flex;align-items:center;gap:8px">';
+                html += '<div class="modal-avatar">'+esc(m.name.charAt(0).toUpperCase())+'</div>';
+                html += '<div><div style="font-size:12px;font-weight:500;color:inherit">'+esc(m.name)+'</div><div class="modal-text-secondary">'+esc(m.email)+'</div></div>';
+                html += '</div>';
+                html += '<span class="modal-role-badge '+esc(m.role)+'">'+esc(m.role)+'</span>';
+                html += '</div>';
+            });
+        } else {
+            html += '<p class="modal-text-secondary">No members found.</p>';
+        }
+        html += '</div>';
+        
+        // Invites section
+        html += '<div style="margin-bottom:12px">';
+        html += '<div class="modal-section-title">Invite Link</div>';
+        
+        // Create new invite section
+        html += '<div style="display:flex;gap:6px;margin-bottom:8px">';
+        html += '<input id="invite-email-input" placeholder="Email (optional)" class="modal-input" style="flex:1">';
+        html += '<button id="gen-invite-btn" class="modal-btn-primary" style="white-space:nowrap">Generate Link</button>';
+        html += '</div>';
+        
+        // Existing invites
+        if(res.invites&&res.invites.length){
+            html += '<div class="modal-text-secondary" style="margin-bottom:4px">Pending invites:</div>';
+            $.each(res.invites,(i,inv)=>{
+                html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">';
+                html += '<span style="color:inherit;font-size:11px">'+(inv.email||'Anyone with link')+'</span>';
+                html += '<button class="copy-invite-link modal-btn-sm modal-btn-copy" data-url="'+esc(inv.invite_url)+'">Copy Link</button>';
+                html += '</div>';
+            });
+        }
+        html += '</div></div>';
+        
+        swal({
+            title:'Workspace Members',
+            html,
+            width:'480px',
+            showConfirmButton:false,
+            showCloseButton:true,
+            didOpen:()=>{
+                $('#gen-invite-btn').on('click',async function(){
+                    const email=$('#invite-email-input').val().trim()||null;
+                    try{
+                        const invRes = await api('/workspaces/'+wid+'/invites',{
+                            method:'POST',
+                            body:JSON.stringify({email})
+                        });
+                        if(invRes.invite){
+                            await navigator.clipboard.writeText(invRes.invite.invite_url);
+                            toast('Invite link copied to clipboard!');
+                            Swal.close();
+                            manageWorkspaceMembers();
+                        }
+                    }catch(e){
+                        toast('Failed to create invite');
+                    }
+                });
+                $('.copy-invite-link').on('click',function(){
+                    const url=$(this).data('url');
+                    navigator.clipboard.writeText(url).then(()=>toast('Link copied!')).catch(()=>{});
+                });
+            }
+        });
+    }catch(e){
+        toast('Failed to load members');
+    }
+}
+
 // ========= WORKSPACES =========
 async function renderWorkspaces(){
     await fetchWorks();
     const $sel=$('#workspace-select'); $sel.empty();
     $sel.append($('<option>',{value:''}).text('No Workspace'));
     $.each(works,(i,w)=>{$sel.append($('<option>',{value:w.id}).text(w.name));});
+    
+    // Restore selected workspace
+    const savedWid = localStorage.getItem('incognito-active-workspace');
+    if(savedWid && works.find(w=>w.id===savedWid)){
+        $sel.val(savedWid);
+    }
 }
 function manageWorkspaces(){
-    let html='<div style="max-height:60vh;overflow-y:auto"><div class="flex gap-2 mb-2"><button class="add-ws-btn" style="padding:6px 12px;background:#4f46e5;color:white;border-radius:6px;font-size:12px;border:none;cursor:pointer">+ New Workspace</button></div><div id="ws-manager-list">';
+    let html='<div style="max-height:60vh;overflow-y:auto"><div style="display:flex;gap:8px;margin-bottom:8px"><button class="add-ws-btn modal-btn-primary">+ New Workspace</button></div><div id="ws-manager-list">';
     if(works.length){
         $.each(works,(i,w)=>{
-            html+=`<div class="ws-card" data-id="${w.id}" style="border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin-bottom:8px;background:#f8fafc">
+            html+=`<div class="ws-card modal-card" data-id="${w.id}">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                    <input class="ws-name" value="${esc(w.name)}" style="flex:1;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;font-weight:600">
-                    <button class="del-ws-btn" style="color:#ef4444;font-size:16px;border:none;background:none;cursor:pointer">&times;</button>
+                    <input class="ws-name modal-input" value="${esc(w.name)}" style="font-weight:600">
+                    <button class="del-ws-btn modal-btn-danger">&times;</button>
                 </div>
-                <div style="font-size:11px;color:#64748b;margin-bottom:4px">Collections in workspace:</div>
-                <div class="ws-colls">${colls.map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;margin:2px 0;cursor:pointer"><input type="checkbox" class="ws-coll-chk" value="${c.id}" ${(w.collections||[]).find(x=>x.id===c.id)?'checked':''}>${esc(c.name)}</label>`).join('')}</div></div>`;
+                <div class="modal-text-secondary" style="margin-bottom:4px">Collections in workspace:</div>
+                <div class="ws-colls">${colls.map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;margin:2px 0;cursor:pointer;color:inherit"><input type="checkbox" class="ws-coll-chk" value="${c.id}" ${(w.collections||[]).find(x=>x.id===c.id)?'checked':''}>${esc(c.name)}</label>`).join('')}</div></div>`;
         });
-    } else html+='<p style="color:#94a3b8;font-size:12px">No workspaces yet</p>';
+    } else html+='<p class="modal-text-secondary" style="font-size:12px">No workspaces yet</p>';
     html+='</div></div>';
-    Swal.fire({title:'Manage Workspaces',html,width:'500px',showCancelButton:true,confirmButtonText:'Save',
+    swal({title:'Manage Workspaces',html,width:'500px',showCancelButton:true,confirmButtonText:'Save',confirmButtonColor:'#4f46e5',
         didOpen:()=>{
             $('.add-ws-btn').on('click',function(){
-                const $card=$('<div>',{class:'ws-card','data-id':'new',css:{border:'1px solid #e2e8f0',borderRadius:'8px',padding:'10px',marginBottom:'8px',background:'#f8fafc'}});
-                $card.html(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input class="ws-name" placeholder="Workspace Name" style="flex:1;padding:4px 8px;border:1px solid #e2e8f0;border-radius:4px;font-size:12px;font-weight:600"><button class="del-ws-btn" style="color:#ef4444;font-size:16px;border:none;background:none;cursor:pointer">&times;</button></div><div style="font-size:11px;color:#64748b;margin-bottom:4px">Collections:</div><div class="ws-colls">${colls.map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;margin:2px 0;cursor:pointer"><input type="checkbox" class="ws-coll-chk" value="${c.id}">${esc(c.name)}</label>`).join('')}</div>`);
+                const $card=$('<div>',{class:'ws-card modal-card','data-id':'new'});
+                $card.html(`<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><input class="ws-name modal-input" placeholder="Workspace Name" style="font-weight:600"><button class="del-ws-btn modal-btn-danger">&times;</button></div><div class="modal-text-secondary" style="margin-bottom:4px">Collections:</div><div class="ws-colls">${colls.map(c=>`<label style="display:flex;align-items:center;gap:4px;font-size:11px;margin:2px 0;cursor:pointer;color:inherit"><input type="checkbox" class="ws-coll-chk" value="${c.id}">${esc(c.name)}</label>`).join('')}</div>`);
                 $('#ws-manager-list').append($card);
                 $card.find('.del-ws-btn').on('click',function(){$(this).closest('.ws-card').remove();});
             });
@@ -761,7 +1038,7 @@ $(async function(){
      $(document).on('input','#json-body',updateFieldVarBadges);
      $(document).on('input','#raw-body',updateFieldVarBadges);
      $(document).on('input','.kv-row input',updateFieldVarBadges);
-     $(document).on('change','#workspace-select',function(){const wid=$(this).val();if(wid)localStorage.setItem('incognito-active-workspace',wid);else localStorage.removeItem('incognito-active-workspace');});
+     $(document).on('change','#workspace-select',async function(){const wid=$(this).val();if(wid)localStorage.setItem('incognito-active-workspace',wid);else localStorage.removeItem('incognito-active-workspace');await renderCollections();});
      $(document).on('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();sendReq();}});
      setInterval(()=>{const d=curTab()?.data;if(d&&d.url)saveTabData();},2000);
  });

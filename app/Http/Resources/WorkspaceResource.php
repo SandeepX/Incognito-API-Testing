@@ -13,6 +13,7 @@ class WorkspaceResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'description' => $this->description,
+            'owner_id' => $this->owner_id,
             'collections' => CollectionResource::collection($this->whenLoaded('collections')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

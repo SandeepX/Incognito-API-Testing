@@ -10,6 +10,7 @@ use App\Models\Collection;
 use App\Models\CollectionItem;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\ResourceCollection;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class CollectionItemController extends Controller
@@ -20,11 +21,23 @@ class CollectionItemController extends Controller
             $q->with('children')->orderBy('order');
         }])->findOrFail($collectionId);
 
+        // Ensure user has access to the collection's workspace
+        if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
+            abort(403);
+        }
+
         return ItemResource::collection($collection->items);
     }
 
     public function store(StoreCollectionItemRequest $request, $collectionId)
     {
+        $collection = Collection::findOrFail($collectionId);
+
+        // Ensure user has access to the collection's workspace
+        if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
+            abort(403);
+        }
+
         $data = $request->validated();
 
         $maxOrder =  CollectionItem::where('collection_id', $collectionId)
@@ -48,6 +61,12 @@ class CollectionItemController extends Controller
 
     public function update(UpdateCollectionItemRequest $request, CollectionItem $collectionItem)
     {
+        // Ensure user has access to the collection's workspace
+        $collection = $collectionItem->collection;
+        if (!$collection || !Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
+            abort(403);
+        }
+
         $collectionItem->update($request->validated());
 
         return new ItemResource($collectionItem);
@@ -55,6 +74,12 @@ class CollectionItemController extends Controller
 
     public function destroy(CollectionItem $collectionItem)
     {
+        // Ensure user has access to the collection's workspace
+        $collection = $collectionItem->collection;
+        if (!$collection || !Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
+            abort(403);
+        }
+
         $collectionItem->delete();
 
         return response()->json(['success' => true]);
@@ -62,6 +87,13 @@ class CollectionItemController extends Controller
 
     public function reorder(Request $request, $collectionId)
     {
+        $collection = Collection::findOrFail($collectionId);
+
+        // Ensure user has access to the collection's workspace
+        if (!Auth::user()->workspaces()->where('workspaces.id', $collection->workspace_id)->exists()) {
+            abort(403);
+        }
+
         $validated = $request->validate([
             'items' => 'required|array',
             'items.*.id' => 'required|uuid',

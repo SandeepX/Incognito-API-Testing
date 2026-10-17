@@ -1,0 +1,42 @@
+# Never bake local state or secrets into the image
+.env
+.env.*
+!.env.example
+
+# VCS / IDE
+.git
+.gitattributes
+.gitignore
+.idea
+
+# Build artifacts (rebuilt inside the image)
+node_modules
+vendor
+public/build
+public/hot
+
+# Local data (volume-mounted at runtime instead)
+database/database.sqlite
+database/database.sqlite-journal
+
+# Docker files themselves
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Docs don't belong in the runtime image
+docs
+README.md
+
+# Dev/test tooling not needed at runtime
+tests
+phpunit.xml
+.phpunit.result.cache
+
+# Logs & cache
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+bootstrap/cache/*

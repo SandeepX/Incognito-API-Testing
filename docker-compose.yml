@@ -1,0 +1,50 @@
+services:
+  app:
+    image: incognitoman/incognito-api-testing:latest
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: "Incognito Testing"
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:8080
+      APP_LOCALE: en
+      # Set APP_KEY in .env for stable sessions across container restarts.
+      # If unset, the entrypoint generates a temporary key per boot.
+      APP_KEY: ${APP_KEY:-}
+      LOG_LEVEL: warning
+      DB_CONNECTION: sqlite
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+    volumes:
+      # Persist the SQLite database outside the container.
+      - sqlite-data:/var/www/html/database
+    restart: unless-stopped
+
+    # --- Optional: MySQL instead of SQLite ---
+    # Set DB_CONNECTION=mysql and these vars in .env, then uncomment:
+    # depends_on:
+    #   - mysql
+    # environment:
+    #   DB_HOST: mysql
+    #   DB_PORT: 3306
+    #   DB_DATABASE: incognito
+    #   DB_USERNAME: incognito
+    #   DB_PASSWORD: secret
+  # mysql:
+  #   image: mysql:8
+  #   environment:
+  #     MYSQL_DATABASE: incognito
+  #     MYSQL_USER: incognito
+  #     MYSQL_PASSWORD: secret
+  #     MYSQL_ROOT_PASSWORD: root-secret
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   restart: unless-stopped
+
+volumes:
+  sqlite-data:

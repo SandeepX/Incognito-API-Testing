@@ -13,6 +13,8 @@ A Postman-style **API testing and debugging tool** built with **Laravel 13**. Se
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Running the App](#running-the-app)
+- [Docker](#docker)
+- [Documentation](#documentation)
 - [Project Structure](#project-structure)
 - [Screenshots](#screenshots)
 - [License](#license)
@@ -149,6 +151,44 @@ A Postman-style **API testing and debugging tool** built with **Laravel 13**. Se
 > ```bash
 > composer setup
 > ```
+
+---
+
+## Docker
+
+The app ships with a production-ready multi-stage Docker image (published on
+Docker Hub as [`incognitoman/incognito-api-testing`](https://hub.docker.com/r/incognitoman/incognito-api-testing)).
+
+```bash
+# Run the published image
+cp .env.example .env
+APP_KEY=$(docker run --rm incognitoman/incognito-api-testing:latest php artisan key:generate --show)
+docker compose up -d
+# → http://localhost:8080
+```
+
+Or build locally:
+
+```bash
+docker build -f docker/Dockerfile -t incognitoman/incognito-api-testing:latest .
+docker compose up -d
+```
+
+Migrations run automatically on container start; the SQLite database persists
+in the `sqlite-data` volume; set `APP_KEY` in `.env` for stable sessions.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for environment variables,
+MySQL setup, and publishing instructions.
+
+---
+
+## Documentation
+
+| Doc | Contents |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, request flows, design decisions, module map |
+| [docs/DATA_MODEL.md](docs/DATA_MODEL.md) | Database schema, entity relationships, migrations index |
+| [docs/API_REFERENCE.md](docs/API_REFERENCE.md) | Every HTTP route with methods, paths and semantics |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Docker deployment, env vars, Docker Hub publishing |
 
 ---
 

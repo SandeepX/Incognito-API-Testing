@@ -11,6 +11,7 @@ A Postman-style **API testing and debugging tool** built with **Laravel 13**. Se
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Requirements](#requirements)
+- [Quick Start for Non‑Developers](#quick-start-for-non-developers--10-minutes)
 - [Installation](#installation)
 - [Running the App](#running-the-app)
 - [Docker](#docker)
@@ -107,6 +108,68 @@ A Postman-style **API testing and debugging tool** built with **Laravel 13**. Se
 
 ---
 
+## Quick Start for Non‑Developers (≈ 10 minutes)
+
+No code, no build tools — just install **Docker Desktop** ([Windows/Mac](https://www.docker.com/products/docker-desktop/), [Linux](https://docs.docker.com/engine/install/)) and follow along.
+
+### Step 1 — Get the app files (2 min)
+
+Download this project's repository as a ZIP (green **Code** button → *Download ZIP*), unzip it, and open a terminal inside the folder...
+
+...or, if you only want to *run* the app (not develop it), grab just the **`deploy/`** folder — everything below works from inside it too.
+
+### Step 2 — Create an access key (1 min)
+
+In your terminal, run:
+
+```bash
+docker run --rm --entrypoint php incognitoman/incognito-api-testing:latest artisan key:generate --show
+```
+
+It prints a line like `base64:XzHjsYLkDp4b...` — copy it.
+
+### Step 3 — Configure (2 min)
+
+From inside the `deploy/` folder (or project root), run:
+
+```bash
+cp .env.example .env
+```
+
+Open the new `.env` file in any text editor, find the line starting with `APP_KEY=`, and paste your copied key after the `=`. Optionally set `APP_PORT` if port 8080 is busy.
+
+### Step 4 — Run (3 min)
+
+```bash
+docker compose up -d
+```
+
+First run downloads the app (a few hundred MB) — subsequent starts take seconds. When it's done, open **http://localhost:8080** in a browser.
+
+### Step 5 — Sign up (1 min)
+
+Click **Register**, make an account, and you're in — collections, environments, and history all live in local Docker storage, so they come back even after a restart or upgrade.
+
+### Stopping & restarting
+
+```bash
+docker compose down     # stop
+docker compose up -d    # start again later — your data is kept
+```
+
+### Common issues
+
+| What you see | What it means | Fix |
+|---|---|---|
+| `port is already allocated` | Something else uses port 8080 | Set `APP_PORT=8090` (or any free port) in `.env`, then `docker compose up -d` again |
+| Browser shows nothing | App still starting or wrong port | Wait ~15 s and refresh; open the URL shown after `docker compose up -d` |
+| `docker: command not found` | Docker isn't installed (or running) | Install/start **Docker Desktop**, then retry |
+| Forgot password / want a fresh start | — | `docker compose down -v` deletes saved data (users, collections), then `up -d` re-creates everything |
+
+> Putting this on a server for your team? See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (HTTPS setup, MySQL, upgrades).
+
+---
+
 ## Installation
 
 1. **Clone the repository**
@@ -162,7 +225,7 @@ Docker Hub as [`incognitoman/incognito-api-testing`](https://hub.docker.com/r/in
 ```bash
 # Run the published image
 cp .env.example .env
-APP_KEY=$(docker run --rm incognitoman/incognito-api-testing:latest php artisan key:generate --show)
+APP_KEY=$(docker run --rm --entrypoint php incognitoman/incognito-api-testing:latest artisan key:generate --show)
 docker compose up -d
 # → http://localhost:8080
 ```

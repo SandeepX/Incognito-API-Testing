@@ -20,7 +20,7 @@ Tags pushed: `latest`.
 # create a .env (image ships without secrets)
 cp .env.example .env
 
-APP_KEY=$(docker run -it --rm incognitoman/incognito-api-testing:latest php artisan key:generate --show)
+APP_KEY=$(docker run --rm --entrypoint php incognitoman/incognito-api-testing:latest artisan key:generate --show)
 docker compose up -d
 ```
 
@@ -77,7 +77,70 @@ and uncomment the `mysql` service blocks in `docker-compose.yml`.
 
 ---
 
-## 5. Docker Hub Publishing (maintainers)
+## 5. HTTPS / Reverse Proxy
+
+The container itself serves plain HTTP on port 80. Terminate TLS in front of it —
+never expose the raw container to the internet. Two standard setups:
+
+### Nginx reverse proxy
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name tester.example.com;
+
+    ssl_certificate     /etc/letsencrypt/live/tester.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/tester.example.com/privkey.pem;
+
+    location / {
+        proxy_pass         http://127.0.0.1:8080;   # or the container IP/port
+        proxy_set_header   Host               $host;
+        proxy_set_header   X-Real-IP          $remote_addr;
+        proxy_set_header   X-Forwarded-For    $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto  $scheme;
+        proxy_read_timeout 120s;                     # long-ish proxy requests
+        client_max_body_size 32m;                    # large JSON payloads
+    }
+}
+
+server {
+    listen 80;
+    server_name tester.example.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+Then set in `.env`:
+
+```env
+APP_URL=https://tester.example.com
+```
+
+This matters: `APP_URL` is used for workspace **invite links** and **docs links** —
+if it still says `localhost:8080`, everyone you invite gets a broken link.
+
+If the request to the app really comes through a TLS proxy, Laravel trusts the
+`X-Forwarded-Proto` header once `TrustProxies` is configured (Laravel 13 handles
+`REMOTE_ADDR` proxies automatically; for a dedicated proxy IP, list it in
+the trusted-proxies configuration (`bootstrap/app.php` middleware settings).
+
+### Caddy (simplest, auto-HTTPS)
+
+```Caddyfile
+tester.example.com {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+Caddy fetches and renews the certificate automatically. No other config needed.
+
+⚠️ **Self-signed / plain HTTP on a public server**: the app transmits API keys
+and bearer tokens typed into the request builder — plaintext HTTP puts your
+users' secrets on the public network. Always TLS in production.
+
+---
+
+## 6. Docker Hub Publishing (maintainers)
 
 ```bash
 docker build -f docker/Dockerfile -t incognitoman/incognito-api-testing:latest .
@@ -98,7 +161,7 @@ Notes:
 
 ---
 
-## 6. Troubleshooting
+## 7. Troubleshooting
 
 | Symptom | Fix |
 |---|---|

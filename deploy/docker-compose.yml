@@ -1,0 +1,23 @@
+# Standalone deploy folder — pull the image from Docker Hub and run, no source code needed.
+# Copy this whole `deploy/` folder to any machine with Docker and:
+#
+#   cp .env.example .env   # then paste an APP_KEY inside
+#   docker compose up -d
+#
+# Port conflicts? Set APP_PORT in .env (e.g. APP_PORT=80) or run:
+#   APP_PORT=8081 docker compose up -d
+#
+services:
+  app:
+    image: incognitoman/incognito-api-testing:latest
+    pull_policy: missing          # downloads the image on first run, reuses it after
+    ports:
+      - "${APP_PORT:-8080}:80"
+    env_file: .env
+    volumes:
+      # Persist the SQLite database outside the container (users, collections, environments).
+      - incognito-sqlite:/var/www/html/database
+    restart: unless-stopped
+
+volumes:
+  incognito-sqlite:
